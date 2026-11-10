@@ -49,6 +49,9 @@ export async function openVideo(file: File) {
         );
       video.src = url;
     });
+    // Browser webcam recordings (MediaRecorder WebM) often report an
+    // infinite duration until the player seeks past the end.
+    if (video.duration === Infinity) await resolveDuration(video);
     if (!Number.isFinite(video.duration) || !video.videoWidth)
       throw Error(
         "Video has no usable duration or dimensions. Export a standard MP4 copy.",
@@ -96,4 +99,22 @@ export async function seek(
     signal?.addEventListener("abort", abort, { once: true });
     video.currentTime = time;
   });
+}
+async function resolveDuration(video: HTMLVideoElement) {
+  await new Promise<void>((resolve) => {
+    const timer = setTimeout(done, 5000);
+    function done() {
+      clearTimeout(timer);
+      video.removeEventListener("durationchange", check);
+      video.removeEventListener("timeupdate", check);
+      resolve();
+    }
+    function check() {
+      if (Number.isFinite(video.duration)) done();
+    }
+    video.addEventListener("durationchange", check);
+    video.addEventListener("timeupdate", check);
+    video.currentTime = Number.MAX_SAFE_INTEGER;
+  });
+  video.currentTime = 0;
 }
