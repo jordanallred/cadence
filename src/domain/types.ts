@@ -1,0 +1,23 @@
+import { z } from 'zod';
+export const pointSchema = z.object({x:z.number().finite(),y:z.number().finite(),visibility:z.number().min(0).max(1)});
+export const frameSchema = z.object({timeMs:z.number().nonnegative(),points:z.array(pointSchema).max(33),people:z.number().int().min(0).max(2), corrected:z.boolean().optional()});
+export const viewSchema=z.enum(['left','right','front','rear']);
+export type View=z.infer<typeof viewSchema>;
+export type Point=z.infer<typeof pointSchema>;
+export type PoseFrame=z.infer<typeof frameSchema>;
+export const intakeSchema=z.object({name:z.string().max(120),bike:z.string().max(120),discipline:z.enum(['road','gravel','mountain','stationary']),goal:z.string().max(1000),experience:z.string().max(100),units:z.enum(['metric','imperial']),saddleHeight:z.number().positive().max(1500).nullable(),saddleSetback:z.number().min(-200).max(400).nullable(),saddleTilt:z.number().min(-30).max(30).nullable(),crankLength:z.number().min(80).max(250).nullable(),cockpit:z.string().max(1000),limitations:z.string().max(1500),symptom:z.enum(['none','knee','back','neck','hands','saddle','feet','other']),severity:z.number().min(0).max(10),onset:z.string().max(500),outsideCycling:z.boolean(),trainingChange:z.boolean(),equipmentIssue:z.boolean(),persistent:z.boolean(),screen:z.enum(['unknown','none','emergency-back','urgent-back','urgent-knee']),mechanicalLimits:z.boolean(),notes:z.string().max(3000)});
+export type Intake=z.infer<typeof intakeSchema>;
+export const metricSchema=z.object({id:z.string(),label:z.string(),value:z.number().finite(),unit:z.string(),sampleCount:z.number().int().nonnegative(),confidence:z.enum(['low','moderate']),limitations:z.array(z.string())});
+export type Metric=z.infer<typeof metricSchema>;
+export const qualitySchema=z.object({code:z.string(),severity:z.enum(['warning','reject']),message:z.string()});
+export type QualityIssue=z.infer<typeof qualitySchema>;
+export const clipSchema=z.object({id:z.string(),view:viewSchema,name:z.string().max(300),size:z.number().nonnegative(),duration:z.number().positive(),width:z.number().positive().max(16384),height:z.number().positive().max(16384),frames:z.array(frameSchema).max(2000),originalFrames:z.array(frameSchema).max(2000).optional(),quality:z.array(qualitySchema),metrics:z.array(metricSchema),modelVersion:z.string(),createdAt:z.string(),setupRevision:z.number().int().nonnegative(),reviewed:z.boolean()});
+export type ClipAnalysis=z.infer<typeof clipSchema>;
+export const recommendationSchema=z.object({id:z.string(),outcome:z.enum(['experiment','information','equipment-training','assessment','no-change']),urgency:z.enum(['routine','urgent','emergency']),title:z.string(),observations:z.string(),alternatives:z.string(),action:z.string(),prerequisites:z.string(),recheck:z.string(),sources:z.array(z.string()),ruleVersion:z.string()});
+export type Recommendation=z.infer<typeof recommendationSchema>;
+export const eventSchema=z.object({id:z.string(),at:z.string(),kind:z.enum(['adjustment','revert','retain','ride']),detail:z.string().max(3000),setting:z.enum(['saddleHeight','saddleSetback','saddleTilt','other']).optional(),before:z.number().nullable().optional(),after:z.number().nullable().optional(),experimentId:z.string().optional(),duration:z.number().min(0).max(1440).optional(),intensity:z.enum(['easy','moderate','hard']).optional(),comfort:z.number().min(0).max(10).optional(),response:z.enum(['better','same','worse']).optional()});
+export type FitEvent=z.infer<typeof eventSchema>;
+export const sessionSchema=z.object({schemaVersion:z.literal(1),id:z.string(),createdAt:z.string(),updatedAt:z.string(),intake:intakeSchema,baseline:intakeSchema.nullable(),clips:z.array(clipSchema).max(40),events:z.array(eventSchema).max(2000),recommendations:z.array(recommendationSchema),setupRevision:z.number().int().nonnegative()});
+export type Session=z.infer<typeof sessionSchema>;
+export const defaultIntake:Intake={name:'',bike:'',discipline:'road',goal:'Comfort on longer rides',experience:'Recreational',units:'metric',saddleHeight:null,saddleSetback:null,saddleTilt:null,crankLength:null,cockpit:'',limitations:'',symptom:'none',severity:0,onset:'',outsideCycling:false,trainingChange:false,equipmentIssue:false,persistent:false,screen:'unknown',mechanicalLimits:false,notes:''};
+export function newSession():Session{return {schemaVersion:1,id:crypto.randomUUID(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),intake:{...defaultIntake},baseline:null,clips:[],events:[],recommendations:[],setupRevision:0};}
