@@ -1,5 +1,11 @@
-import type { PoseFrame, View, Metric, QualityIssue } from "../domain/types";
-import { angle, quantile } from "./geometry";
+import type {
+  PoseFrame,
+  View,
+  Metric,
+  QualityIssue,
+  Point,
+} from "../domain/types";
+import { angle, quantile, smoothSeries } from "./geometry";
 export const joints: Record<string, number> = {
   leftShoulder: 11,
   rightShoulder: 12,
@@ -18,6 +24,39 @@ export const joints: Record<string, number> = {
   leftToe: 31,
   rightToe: 32,
 };
+/** Product heuristics, kept together so they are easy to audit and tune. */
+export const QUALITY = {
+  minVisibility: 0.65,
+  minUsableShare: 0.8,
+  minSpanMs: 7500,
+  maxGapMs: 350,
+  minCyclePeriodMs: 400,
+  maxCyclePeriodMs: 2500,
+  maxPeriodRatio: 1.6,
+  minAnkleSpan: 0.025,
+  optionalVisibility: 0.5,
+  optionalShare: 0.7,
+};
+const median = (v: number[]) => quantile(v, 0.5);
+/**
+ * Per-cycle minimum (sign 1) or maximum (sign -1), refined between frames
+ * with a least-squares parabola through the extreme sample and two
+ * neighbours each side. Frame sampling alone misses the true extreme.
+ */
+export function extreme(c: number[], sign: 1 | -1): number {
+  let k = -1;
+  for (let n = 0; n < c.length; n++)
+    if (Number.isFinite(c[n]) && (k < 0 || sign * c[n] < sign * c[k])) k = n;
+  if (k < 0) return NaN;
+  const y = [-2, -1, 0, 1, 2].map((o) => c[k + o]);
+  if (!y.every(Number.isFinite)) return c[k];
+  const a2 = (2 * y[0] - y[1] - 2 * y[2] - y[3] + 2 * y[4]) / 14,
+    a1 = (-2 * y[0] - y[1] + y[3] + 2 * y[4]) / 10,
+    a0 = (-3 * y[0] + 12 * y[1] + 17 * y[2] + 12 * y[3] - 3 * y[4]) / 35;
+  if (sign * a2 <= 0 || Math.abs(a1 / (2 * a2)) > 1.5) return c[k];
+  return a0 - (a1 * a1) / (4 * a2);
+}
+const iqr = (v: number[]) => quantile(v, 0.75) - quantile(v, 0.25);
 export function measureClip(
   frames: PoseFrame[],
   view: View,
@@ -30,7 +69,10 @@ export function measureClip(
     metrics: [],
     quality: [...quality, { code, severity: "reject" as const, message }],
   });
-  if (frames.length < 40)
+  if (
+    frames.length < 40 ||
+    frames.at(-1)!.timeMs - frames[0].timeMs < QUALITY.minSpanMs
+  )
     return reject(
       "duration",
       "Record at least 8 seconds of steady pedaling with the whole rider visible.",
@@ -50,44 +92,68 @@ export function measureClip(
   const required = side
     ? [11 + off, 23 + off, 25 + off, 27 + off]
     : [11, 12, 23, 24, 25, 26, 27, 28];
+  const ok = (p: Point | undefined, v = QUALITY.minVisibility) =>
+    !!p &&
+    p.visibility >= v &&
+    p.x > 0.01 &&
+    p.x < 0.99 &&
+    p.y > 0.01 &&
+    p.y < 0.99;
   const usable = frames.filter(
-    (f) =>
-      f.people === 1 &&
-      required.every((j) => {
-        const p = f.points[j];
-        return (
-          p &&
-          p.visibility >= 0.65 &&
-          p.x > 0.01 &&
-          p.x < 0.99 &&
-          p.y > 0.01 &&
-          p.y < 0.99
-        );
-      }),
+    (f) => f.people === 1 && required.every((j) => ok(f.points[j])),
   );
-  if (usable.length / frames.length < 0.8)
+  if (usable.length / frames.length < QUALITY.minUsableShare)
     return reject(
       "visibility",
       "Too many joints are hidden, cropped or uncertain. Improve lighting, camera placement or clothing contrast.",
     );
-  if (usable.some((f, n) => n > 0 && f.timeMs - usable[n - 1].timeMs > 350))
-    return reject("gaps", "Tracking has gaps. Re-record without obstructions.");
-  const ankles = usable.map((f) => f.points[27 + off].y),
-    span = quantile(ankles, 0.95) - quantile(ankles, 0.05);
-  const smooth = ankles.map((_, n) =>
-    quantile(ankles.slice(Math.max(0, n - 1), n + 2), 0.5),
-  );
-  const peaks: number[] = [];
-  for (let n = 2; n < smooth.length - 2; n++)
-    if (
-      smooth[n] >= smooth[n - 1] &&
-      smooth[n] > smooth[n + 1] &&
-      smooth[n] > quantile(ankles, 0.65) &&
-      (peaks.length === 0 ||
-        usable[n].timeMs - usable[peaks.at(-1)!].timeMs > 400)
+  if (
+    usable.some(
+      (f, n) => n > 0 && f.timeMs - usable[n - 1].timeMs > QUALITY.maxGapMs,
     )
-      peaks.push(n);
-  if (span < 0.025 || peaks.length < 4)
+  )
+    return reject("gaps", "Tracking has gaps. Re-record without obstructions.");
+  // Temporal smoothing removes frame-to-frame landmark jitter before any
+  // angle is computed. Raw landmarks stay on the clip for review.
+  const track = (j: number, average = true): Point[] => {
+    const xs = smoothSeries(
+        usable.map((f) => f.points[j]?.x ?? NaN),
+        average,
+      ),
+      ys = smoothSeries(
+        usable.map((f) => f.points[j]?.y ?? NaN),
+        average,
+      );
+    return xs.map((x, n) => ({
+      x,
+      y: ys[n],
+      visibility: usable[n].points[j]?.visibility ?? 0,
+    }));
+  };
+  const optional = (j: number) =>
+    usable.filter((f) => ok(f.points[j], QUALITY.optionalVisibility)).length /
+      usable.length >=
+    QUALITY.optionalShare;
+  const ankleTrack = track(27 + off);
+  const ankles = ankleTrack.map((p) => p.y),
+    span = quantile(ankles, 0.95) - quantile(ankles, 0.05);
+  // Bottom of the pedal stroke: the ankle's lowest image position per cycle.
+  const peaks: number[] = [];
+  const high = quantile(ankles, 0.65);
+  for (let n = 1; n < ankles.length - 1; n++) {
+    if (!(ankles[n] >= ankles[n - 1] && ankles[n] > ankles[n + 1])) continue;
+    if (ankles[n] <= high) continue;
+    const last = peaks.at(-1);
+    if (
+      last !== undefined &&
+      usable[n].timeMs - usable[last].timeMs <= QUALITY.minCyclePeriodMs
+    ) {
+      if (ankles[n] > ankles[last]) peaks[peaks.length - 1] = n;
+      continue;
+    }
+    peaks.push(n);
+  }
+  if (span < QUALITY.minAnkleSpan || peaks.length < 4)
     return reject(
       "cycles",
       "Could not identify at least three complete pedal cycles. Use a steady 10–20 second recording.",
@@ -96,8 +162,10 @@ export function measureClip(
     .slice(1)
     .map((p, n) => usable[p].timeMs - usable[peaks[n]].timeMs);
   if (
-    periods.some((p) => p < 400 || p > 2500) ||
-    Math.max(...periods) / Math.min(...periods) > 1.6
+    periods.some(
+      (p) => p < QUALITY.minCyclePeriodMs || p > QUALITY.maxCyclePeriodMs,
+    ) ||
+    Math.max(...periods) / Math.min(...periods) > QUALITY.maxPeriodRatio
   )
     return reject(
       "cycles",
@@ -109,12 +177,14 @@ export function measureClip(
     message:
       "2D estimates. Camera perspective, clothing and landmark errors affect every measurement; review overlays before using results.",
   });
+  const cycles = peaks.length - 1;
   const add = (
     id: string,
     label: string,
     value: number,
     unit: string,
     sampleCount: number,
+    spread?: number,
   ) =>
     metrics.push({
       id,
@@ -122,58 +192,104 @@ export function measureClip(
       value: Math.round(value * 10) / 10,
       unit,
       sampleCount,
-      confidence: "moderate",
+      confidence:
+        spread !== undefined && (spread > 5 || sampleCount < 4)
+          ? "low"
+          : "moderate",
+      ...(spread !== undefined ? { spread: Math.round(spread * 10) / 10 } : {}),
       limitations: [
         "Projected measurement; not clinical validation.",
         "Tracking confidence is not an angle-error bound.",
       ],
     });
-  add(
-    "cycles",
-    "Complete cycles",
-    peaks.length - 1,
-    "cycles",
-    peaks.length - 1,
-  );
+  add("cycles", "Complete cycles", cycles, "cycles", cycles);
   add(
     "cadence",
     "Estimated cadence",
-    60000 / quantile(periods, 0.5),
+    60000 / median(periods),
     "rpm",
     periods.length,
   );
+  const perCycle = (series: number[], pick: (c: number[]) => number) => {
+    const out: number[] = [];
+    for (let n = 1; n < peaks.length; n++)
+      out.push(pick(series.slice(peaks[n - 1], peaks[n] + 1)));
+    return out;
+  };
   if (side) {
-    const flex = usable.map((f) => {
-      const p = f.points;
-      const a = angle(p[23 + off], p[25 + off], p[27 + off], w, h);
+    const hip = track(23 + off),
+      knee = track(25 + off),
+      shoulder = track(11 + off);
+    // Check that the near side matches the selected view.
+    const vis = (js: number[]) =>
+      median(
+        usable.flatMap((f) => js.map((j) => f.points[j]?.visibility ?? 0)),
+      );
+    const near = vis([11 + off, 23 + off, 25 + off, 27 + off]),
+      far = vis([12 - off, 24 - off, 26 - off, 28 - off]);
+    if (far > near + 0.1)
+      quality.push({
+        code: "side",
+        severity: "warning",
+        message: `The ${view === "left" ? "right" : "left"} side appears closer to the camera. Check that this view is labelled correctly.`,
+      });
+    // Direction of travel: the shoulders sit ahead of the hips.
+    const facing = median(shoulder.map((s, n) => s.x - hip[n].x)) >= 0 ? 1 : -1;
+    // Joint-angle extremes use spike-filtered but unaveraged landmarks;
+    // averaging flattens the peaks. The per-cycle parabola fit denoises.
+    const rh = track(23 + off, false),
+      rk = track(25 + off, false),
+      ra = track(27 + off, false);
+    const flex = usable.map((_, n) => {
+      const a = angle(rh[n], rk[n], ra[n], w, h);
       return a === null ? NaN : 180 - a;
     });
-    const mins: number[] = [],
-      maxs: number[] = [];
-    for (let n = 1; n < peaks.length; n++) {
-      const cycle = flex.slice(peaks[n - 1], peaks[n] + 1);
-      mins.push(quantile(cycle, 0.05));
-      maxs.push(quantile(cycle, 0.95));
-    }
+    const mins = perCycle(flex, (c) => extreme(c, 1)),
+      maxs = perCycle(flex, (c) => extreme(c, -1));
     add(
       "knee-min",
       "Knee flexion · extension",
-      quantile(mins, 0.5),
+      median(mins),
       "°",
       mins.length,
+      iqr(mins),
+    );
+    const bdc = peaks.slice(1).map((p) => flex[p]);
+    add(
+      "knee-bdc",
+      "Knee flexion · bottom of stroke",
+      median(bdc),
+      "°",
+      bdc.length,
+      iqr(bdc),
     );
     add(
       "knee-max",
       "Knee flexion · top",
-      quantile(maxs, 0.5),
+      median(maxs),
       "°",
       maxs.length,
+      iqr(maxs),
     );
+    const dist = (a: Point[], b: Point[]) =>
+      median(
+        a.map((p, n) => Math.hypot((p.x - b[n].x) * w, (p.y - b[n].y) * h)),
+      );
+    const thigh = dist(hip, knee),
+      shank = dist(knee, ankleTrack);
+    if (thigh > 0 && shank > 0)
+      add(
+        "leg-ratio",
+        "Thigh / shank length",
+        thigh / shank,
+        "ratio",
+        usable.length,
+      );
     const torso = usable.map(
-      (f) =>
+      (_, n) =>
         (Math.atan2(
-          Math.abs((f.points[11 + off].y - f.points[23 + off].y) * h),
-          Math.abs((f.points[11 + off].x - f.points[23 + off].x) * w),
+          Math.abs((shoulder[n].y - hip[n].y) * h),
+          Math.abs((shoulder[n].x - hip[n].x) * w),
         ) *
           180) /
         Math.PI,
@@ -181,14 +297,13 @@ export function measureClip(
     add(
       "torso",
       "Torso to horizontal",
-      quantile(torso, 0.5),
+      median(torso),
       "°",
       usable.length,
+      iqr(torso),
     );
-    const hips = usable
-      .map((f) =>
-        angle(f.points[11 + off], f.points[23 + off], f.points[25 + off], w, h),
-      )
+    const hips = shoulder
+      .map((s, n) => angle(s, hip[n], knee[n], w, h))
       .filter((x): x is number => x !== null);
     add(
       "hip",
@@ -197,6 +312,85 @@ export function measureClip(
       "°",
       hips.length,
     );
+    const toeJ = 31 + off;
+    if (optional(toeJ)) {
+      const toe = track(toeJ);
+      const ankleAngle = usable.map((_, n) => {
+        const a = angle(knee[n], ankleTrack[n], toe[n], w, h);
+        return a === null ? NaN : a;
+      });
+      const atBottom = peaks.slice(1).map((p) => ankleAngle[p]);
+      add(
+        "ankle-bdc",
+        "Ankle angle · bottom of stroke",
+        median(atBottom),
+        "°",
+        atBottom.length,
+        iqr(atBottom),
+      );
+      const rom = perCycle(
+        ankleAngle,
+        (c) => quantile(c, 0.95) - quantile(c, 0.05),
+      );
+      add(
+        "ankle-rom",
+        "Ankle range of motion",
+        median(rom),
+        "°",
+        rom.length,
+        iqr(rom),
+      );
+      // Knee relative to the ball of the foot with the crank forward
+      // (3 o'clock): the frame where the foot is furthest forward each cycle.
+      const forward: number[] = [];
+      for (let n = 1; n < peaks.length; n++) {
+        let best = peaks[n - 1];
+        for (let k = peaks[n - 1]; k <= peaks[n]; k++)
+          if (facing * ankleTrack[k].x > facing * ankleTrack[best].x) best = k;
+        const ball =
+          ankleTrack[best].x + 0.65 * (toe[best].x - ankleTrack[best].x);
+        forward.push(
+          ((facing * (knee[best].x - ball) * w) / Math.max(thigh, 1)) * 100,
+        );
+      }
+      add(
+        "kops",
+        "Knee ahead of ball of foot · crank forward",
+        median(forward),
+        "% thigh",
+        forward.length,
+        iqr(forward),
+      );
+    }
+    const elbowJ = 13 + off,
+      wristJ = 15 + off;
+    if (optional(elbowJ) && optional(wristJ)) {
+      const elbow = track(elbowJ),
+        wrist = track(wristJ);
+      const elbowFlex = usable
+        .map((_, n) => angle(shoulder[n], elbow[n], wrist[n], w, h))
+        .filter((x): x is number => x !== null)
+        .map((a) => 180 - a);
+      add(
+        "elbow",
+        "Elbow flexion",
+        median(elbowFlex),
+        "°",
+        elbowFlex.length,
+        iqr(elbowFlex),
+      );
+      const shoulderAngle = usable
+        .map((_, n) => angle(hip[n], shoulder[n], elbow[n], w, h))
+        .filter((x): x is number => x !== null);
+      add(
+        "shoulder-angle",
+        "Shoulder angle · torso to upper arm",
+        median(shoulderAngle),
+        "°",
+        shoulderAngle.length,
+        iqr(shoulderAngle),
+      );
+    }
   } else {
     const width = quantile(
       usable.map((f) => Math.abs(f.points[23].x - f.points[24].x) * w),
@@ -207,55 +401,52 @@ export function measureClip(
         "view",
         "The hips are too narrow in this view. Place the camera directly in front or behind.",
       );
-    const pelvis = usable.map(
-      (f) =>
-        (Math.atan2(
-          (f.points[24].y - f.points[23].y) * h,
-          Math.abs((f.points[24].x - f.points[23].x) * w),
-        ) *
-          180) /
-        Math.PI,
-    );
+    const lh = track(23),
+      rh = track(24),
+      ls = track(11),
+      rs = track(12);
+    const tilt = (a: Point[], b: Point[]) =>
+      a.map(
+        (p, n) =>
+          (Math.atan2((b[n].y - p.y) * h, Math.abs((b[n].x - p.x) * w)) * 180) /
+          Math.PI,
+      );
+    const excursion = (c: number[]) => quantile(c, 0.95) - quantile(c, 0.05);
+    const pelvis = perCycle(tilt(lh, rh), excursion);
     add(
       "pelvic-rock",
       "Pelvic tilt excursion",
-      quantile(pelvis, 0.95) - quantile(pelvis, 0.05),
+      median(pelvis),
       "°",
-      usable.length,
+      pelvis.length,
+      iqr(pelvis),
     );
     for (const [name, j] of [
       ["Left", 25],
       ["Right", 26],
     ] as const) {
-      const d = usable.map(
-        (f) =>
-          (((f.points[j].x - (f.points[23].x + f.points[24].x) / 2) * w) /
-            width) *
-          100,
+      const k = track(j);
+      const d = k.map(
+        (p, n) => (((p.x - (lh[n].x + rh[n].x) / 2) * w) / width) * 100,
       );
+      const ex = perCycle(d, excursion);
       add(
         name.toLowerCase() + "-knee",
         name + " knee lateral excursion",
-        quantile(d, 0.95) - quantile(d, 0.05),
+        median(ex),
         "% hip width",
-        usable.length,
+        ex.length,
+        iqr(ex),
       );
     }
-    const shoulder = usable.map(
-      (f) =>
-        (Math.atan2(
-          (f.points[12].y - f.points[11].y) * h,
-          Math.abs((f.points[12].x - f.points[11].x) * w),
-        ) *
-          180) /
-        Math.PI,
-    );
+    const shoulders = perCycle(tilt(ls, rs), excursion);
     add(
       "shoulder",
       "Shoulder tilt excursion",
-      quantile(shoulder, 0.95) - quantile(shoulder, 0.05),
+      median(shoulders),
       "°",
-      usable.length,
+      shoulders.length,
+      iqr(shoulders),
     );
   }
   return { metrics, quality };

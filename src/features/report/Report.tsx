@@ -86,7 +86,33 @@ export function Report({
                 <span className="number">{String(n + 1).padStart(2, "0")}</span>
               </div>
               <h2>{r.title}</h2>
+              {(r.priority || r.confidence) && (
+                <div className="chips">
+                  {r.priority === 1 && (
+                    <span className="chip strong">Do this first</span>
+                  )}
+                  {r.priority && r.priority > 1 && (
+                    <span className="chip">Later · one change at a time</span>
+                  )}
+                  {r.confidence && (
+                    <span className="chip">{r.confidence} confidence</span>
+                  )}
+                </div>
+              )}
               <p>{r.observations}</p>
+              {r.estimate && (
+                <div className="estimate">
+                  <strong>
+                    {r.estimate.direction[0].toUpperCase() +
+                      r.estimate.direction.slice(1)}{" "}
+                    {r.estimate.minMm === r.estimate.maxMm
+                      ? r.estimate.minMm
+                      : `${r.estimate.minMm}–${r.estimate.maxMm}`}{" "}
+                    mm
+                  </strong>
+                  <small>{r.estimate.basis}</small>
+                </div>
+              )}
               <div className="action">
                 <ArrowUpRight size={20} />
                 <p>{r.action}</p>
@@ -138,7 +164,11 @@ export function Report({
                       <div key={m.id}>
                         <span>{m.label}</span>
                         <strong>
-                          {m.value} <small>{m.unit}</small>
+                          {m.value}
+                          {m.spread !== undefined && m.spread > 0 && (
+                            <small> ±{m.spread}</small>
+                          )}{" "}
+                          <small>{m.unit}</small>
                         </strong>
                       </div>
                     ))}
@@ -177,12 +207,12 @@ export function Report({
             </p>
           ))}
           <p>
-            Automatic hardware experiments currently cover saddle-height
-            direction for knee discomfort in road and mountain cycling, when
-            reviewed measurements and context support it. Other issues receive
-            an explanation and a next step, not an invented prescription.
-            Front/rear measurements inform review; they do not establish cleat
-            rotation or structural asymmetry.
+            Experiments cover saddle height (with a millimetre estimate when
+            your saddle height is known) and handlebar reach and drop. They are
+            ranked so you change one thing at a time, starting with the saddle.
+            Front and rear views add knee tracking and pelvic stability; they
+            inform referrals but do not set cleat rotation or establish
+            structural asymmetry. Safety screening always runs first.
           </p>
         </details>
       </section>

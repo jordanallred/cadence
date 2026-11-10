@@ -4,7 +4,7 @@ it("samples monotonic timestamps within trimmed interval", () => {
   const t = sampleTimes(20, 2, 12);
   expect(t[0]).toBe(2);
   expect(t.at(-1)).toBeLessThan(12);
-  expect(t.length).toBe(100);
+  expect(t.length).toBe(300);
   expect(t.every((x, n) => !n || x > t[n - 1])).toBe(true);
 });
 it("rejects ranges outside actual duration", () =>

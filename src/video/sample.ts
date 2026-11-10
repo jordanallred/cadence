@@ -1,7 +1,10 @@
+/** Pose sampling rate. 30 Hz gives ~20 samples per pedal stroke at 90 rpm. */
+export const SAMPLE_HZ = 30;
 export function sampleTimes(
   duration: number,
   start: number,
   end: number,
+  rate = SAMPLE_HZ,
 ): number[] {
   if (
     ![duration, start, end].every(Number.isFinite) ||
@@ -12,8 +15,8 @@ export function sampleTimes(
   )
     throw Error("Choose 8–30 seconds within the video duration.");
   return Array.from(
-    { length: Math.floor((end - start) * 10) },
-    (_, n) => start + n / 10,
+    { length: Math.floor((end - start) * rate) },
+    (_, n) => start + n / rate,
   );
 }
 export async function openVideo(file: File) {

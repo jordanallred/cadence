@@ -1,4 +1,4 @@
-export const RULE_VERSION = "0.1.0";
+export const RULE_VERSION = "0.2.0";
 export const evidence: Record<
   string,
   { title: string; url: string; limit: string }
@@ -19,6 +19,13 @@ export const evidence: Record<
     url: "https://pubmed.ncbi.nlm.nih.gov/32022807/",
     limit:
       "Small cycling study; measurement conventions matter. A pose model is not the laboratory measurement system.",
+  },
+  bini: {
+    title:
+      "Bini et al. — Saddle height, knee injury risk and performance (2011)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/21615188/",
+    limit:
+      "Review suggesting 25–30° static knee flexion with the pedal at the bottom. Evidence is conflicting, samples are small, and static and dynamic measurements differ.",
   },
   review: {
     title: "Husband et al. — Cycling position review (2024)",

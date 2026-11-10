@@ -61,6 +61,8 @@ export const metricSchema = z.object({
   unit: z.string(),
   sampleCount: z.number().int().nonnegative(),
   confidence: z.enum(["low", "moderate"]),
+  /** Cycle-to-cycle interquartile range, in the metric's unit. */
+  spread: z.number().finite().nonnegative().optional(),
   limitations: z.array(z.string()),
 });
 export type Metric = z.infer<typeof metricSchema>;
@@ -106,6 +108,25 @@ export const recommendationSchema = z.object({
   recheck: z.string(),
   sources: z.array(z.string()),
   ruleVersion: z.string(),
+  /** 1 = do this first. Experiments are applied one at a time. */
+  priority: z.number().int().positive().optional(),
+  confidence: z.enum(["low", "moderate", "high"]).optional(),
+  estimate: z
+    .object({
+      setting: z.enum(["saddleHeight", "saddleSetback", "stem", "spacers"]),
+      direction: z.enum([
+        "raise",
+        "lower",
+        "forward",
+        "back",
+        "shorter",
+        "longer",
+      ]),
+      minMm: z.number().nonnegative(),
+      maxMm: z.number().nonnegative(),
+      basis: z.string(),
+    })
+    .optional(),
 });
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export const eventSchema = z.object({
