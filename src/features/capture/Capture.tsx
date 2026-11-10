@@ -1,23 +1,379 @@
-import {useRef,useState,useEffect} from 'react';
-import {Upload,Camera,CheckCircle2,Film,ArrowUpRight} from 'lucide-react';
-import type {ClipAnalysis,View} from '../../domain/types';
-import {analyze} from '../../analysis/run';
-import {openVideo} from '../../video/sample';
-import {Field,Check,Notice} from '../../components/Fields';
-export function Capture({clips,revision,onClip,onReview,onNext}:{clips:ClipAnalysis[];revision:number;onClip:(c:ClipAnalysis,f:File,retain:boolean)=>Promise<void>;onReview:(c:ClipAnalysis)=>void;onNext:()=>void}){
- const [view,setView]=useState<View>('left'),[file,setFile]=useState<File>(),[duration,setDuration]=useState(0),[start,setStart]=useState(0),[end,setEnd]=useState(15),[retain,setRetain]=useState(false),[error,setError]=useState(''),[progress,setProgress]=useState<number|null>(null),[recording,setRecording]=useState(false);
- const abort=useRef<AbortController|null>(null),camera=useRef<HTMLVideoElement>(null),recorder=useRef<MediaRecorder|null>(null),stream=useRef<MediaStream|null>(null),generation=useRef(0);
- useEffect(()=>()=>{abort.current?.abort();if(recorder.current?.state==='recording')recorder.current.stop();stream.current?.getTracks().forEach(t=>t.stop());generation.current++;},[]);
- const select=async(f?:File)=>{if(!f)return;const gen=++generation.current;setError('');setFile(undefined);try{const opened=await openVideo(f);const d=opened.video.duration;opened.dispose();if(gen!==generation.current)return;setFile(f);setDuration(d);setStart(0);setEnd(Math.min(15,d));}catch(e){setError(String(e instanceof Error?e.message:e));}};
- const run=async()=>{if(!file)return;setError('');setProgress(0);abort.current=new AbortController();try{const c=await analyze(file,view,start,end,revision,setProgress,abort.current.signal);await onClip(c,file,retain);setFile(undefined);onReview(c);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setProgress(null);abort.current=null;}};
- const record=async()=>{setError('');try{if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Camera capture is not supported here. Import a video instead.');const s=await navigator.mediaDevices.getUserMedia({video:true,audio:false});stream.current=s;if(camera.current){camera.current.srcObject=s;await camera.current.play();}const r=new MediaRecorder(s);recorder.current=r;const chunks:BlobPart[]=[];r.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};r.onstop=()=>{s.getTracks().forEach(t=>t.stop());setRecording(false);const mime=r.mimeType;void select(new File(chunks,'camera-recording.'+(mime.includes('mp4')?'mp4':'webm'),{type:mime}));};r.start();setRecording(true);}catch(e){stream.current?.getTracks().forEach(t=>t.stop());setError(e instanceof Error?e.message:String(e));}};
- const busy=progress!==null;
- return <><div className="section-title"><span className="eyebrow">02 / SEE THE WHOLE PICTURE</span><h1>Every angle matters.</h1><p>One camera. Three views. A clearer picture of how you move.</p></div>
- <div className="capture-layout"><section className="panel upload-panel"><div className="panel-heading"><h2>Add a recording</h2><span>Any camera · local analysis</span></div><div className="view-tabs" role="group" aria-label="Recording view">{(['left','right','front','rear'] as View[]).map(v=><button disabled={busy||recording} key={v} className={view===v?'selected':''} onClick={()=>setView(v)}>{v==='left'?'Left side':v==='right'?'Right side':v==='front'?'Front':'Rear'}</button>)}</div>
- <label className={'dropzone '+(file?'has-file':'')}><input type="file" accept="video/*" disabled={busy||recording} onChange={e=>{void select(e.target.files?.[0]);e.target.value='';}}/><div className="upload-icon"><Upload size={28}/></div><h3>{file?file.name:'Bring your ride into focus'}</h3><p>{file?`${duration.toFixed(1)} seconds · ${(file.size/1e6).toFixed(1)} MB`:'Choose a video from your computer'}</p><span className="small-button">{file?'Choose another video':'Browse videos'} <ArrowUpRight size={14}/></span><small>Phone, action camera, webcam or existing footage.<br/>Browser-decodable MP4, WebM and other formats.</small></label>
- <div className="camera-row"><span>Or record with a connected camera</span><button className="secondary" disabled={busy} onClick={()=>recording?recorder.current?.stop():void record()}><Camera size={16}/>{recording?'Stop recording':'Use camera'}</button></div><video ref={camera} muted playsInline className={recording?'camera-preview':'hidden'}/>
- {file&&<><div className="form-grid trim"><Field label="Start time · seconds"><input type="number" min="0" step="0.1" disabled={busy} value={start} onChange={e=>setStart(+e.target.value)}/></Field><Field label="End time · seconds" hint="Select 8–30 seconds of steady pedaling."><input type="number" max={duration} step="0.1" disabled={busy} value={end} onChange={e=>setEnd(+e.target.value)}/></Field></div><Check label="Keep this video in local browser storage (optional)" checked={retain} onChange={setRetain}/><small className="muted">Otherwise only measurements are saved; reattach the original video after closing the app.</small></>}
- {error&&<Notice tone="warning">{error}</Notice>}{busy?<div className="analysis-progress"><div><strong>{progress===0?'Loading local pose model…':`Analyzing frames · ${Math.round(progress*100)}%`}</strong><button className="text-button" onClick={()=>abort.current?.abort()}>Cancel</button></div><progress max="1" value={progress!}/></div>:<button className="primary full" disabled={!file||recording} onClick={()=>void run()}>Analyze {view} view <ArrowUpRight size={17}/></button>}</section>
- <aside><section className="guide"><span className="eyebrow">A GOOD RECORDING</span><h2>Make the movement<br/>easy to see.</h2><ol><li><strong>Ride steadily</strong><p>Use a secure trainer. Warm up, then pedal comfortably at your normal effort.</p></li><li><strong>Place the camera squarely</strong><p>Keep it level near hip height, far enough away to include your head, hands and feet. Avoid ultra-wide lenses.</p></li><li><strong>Keep the setup consistent</strong><p>Record each view without changing the bike. Use your usual shoes and hand position.</p></li></ol><details><summary>Tips for phone recordings</summary><p>Support the phone, use the rear camera and good lighting. Landscape usually frames the rider well; portrait also works. Transfer the original file without messaging-app compression.</p></details><details><summary>Video will not open?</summary><p>HEVC support varies by browser. Use <a href="https://handbrake.fr/" target="_blank" rel="noreferrer">HandBrake</a> locally to convert a copy to H.264 MP4. No upload is needed.</p></details></section><div className="privacy-note"><span className="status-dot"/> Your videos stay on this computer.</div></aside></div>
- <section className="panel"><div className="panel-heading"><h2>Your recordings</h2><span>Setup {revision+1}</span></div>{!clips.length?<div className="empty-inline"><Film/><p>Your analyzed recordings will appear here.</p></div>:<div className="clip-list">{clips.map(c=><button key={c.id} onClick={()=>onReview(c)}><Film size={20}/><span><strong>{c.view} view</strong><small>{c.name} · Setup {c.setupRevision+1}</small></span><span className="clip-status">{c.quality.some(q=>q.severity==='reject')?'Needs a new recording':c.reviewed?<><CheckCircle2 size={15}/>Reviewed</>:'Review tracking'}</span><ArrowUpRight size={16}/></button>)}</div>}</section><div className="footer-actions"><p>At least one side, front and rear view for the full assessment.</p><button className="primary" onClick={onNext} disabled={busy}>See fit report →</button></div></>;
+import { useRef, useState, useEffect } from "react";
+import { Upload, Camera, CheckCircle2, Film, ArrowUpRight } from "lucide-react";
+import type { ClipAnalysis, View } from "../../domain/types";
+import { analyze } from "../../analysis/run";
+import { openVideo } from "../../video/sample";
+import { Field, Check, Notice } from "../../components/Fields";
+export function Capture({
+  clips,
+  revision,
+  onClip,
+  onReview,
+  onNext,
+}: {
+  clips: ClipAnalysis[];
+  revision: number;
+  onClip: (c: ClipAnalysis, f: File, retain: boolean) => Promise<void>;
+  onReview: (c: ClipAnalysis) => void;
+  onNext: () => void;
+}) {
+  const [view, setView] = useState<View>("left"),
+    [file, setFile] = useState<File>(),
+    [duration, setDuration] = useState(0),
+    [start, setStart] = useState(0),
+    [end, setEnd] = useState(15),
+    [retain, setRetain] = useState(false),
+    [error, setError] = useState(""),
+    [progress, setProgress] = useState<number | null>(null),
+    [recording, setRecording] = useState(false);
+  const abort = useRef<AbortController | null>(null),
+    camera = useRef<HTMLVideoElement>(null),
+    recorder = useRef<MediaRecorder | null>(null),
+    stream = useRef<MediaStream | null>(null),
+    generation = useRef(0);
+  useEffect(
+    () => () => {
+      abort.current?.abort();
+      if (recorder.current?.state === "recording") recorder.current.stop();
+      stream.current?.getTracks().forEach((t) => t.stop());
+      generation.current++;
+    },
+    [],
+  );
+  const select = async (f?: File) => {
+    if (!f) return;
+    const gen = ++generation.current;
+    setError("");
+    setFile(undefined);
+    try {
+      const opened = await openVideo(f);
+      const d = opened.video.duration;
+      opened.dispose();
+      if (gen !== generation.current) return;
+      setFile(f);
+      setDuration(d);
+      setStart(0);
+      setEnd(Math.min(15, d));
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  };
+  const run = async () => {
+    if (!file) return;
+    setError("");
+    setProgress(0);
+    abort.current = new AbortController();
+    try {
+      const c = await analyze(
+        file,
+        view,
+        start,
+        end,
+        revision,
+        setProgress,
+        abort.current.signal,
+      );
+      await onClip(c, file, retain);
+      setFile(undefined);
+      onReview(c);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setProgress(null);
+      abort.current = null;
+    }
+  };
+  const record = async () => {
+    setError("");
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder)
+        throw Error(
+          "Camera capture is not supported here. Import a video instead.",
+        );
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      stream.current = s;
+      if (camera.current) {
+        camera.current.srcObject = s;
+        await camera.current.play();
+      }
+      const r = new MediaRecorder(s);
+      recorder.current = r;
+      const chunks: BlobPart[] = [];
+      r.ondataavailable = (e) => {
+        if (e.data.size) chunks.push(e.data);
+      };
+      r.onstop = () => {
+        s.getTracks().forEach((t) => t.stop());
+        setRecording(false);
+        const mime = r.mimeType;
+        void select(
+          new File(
+            chunks,
+            "camera-recording." + (mime.includes("mp4") ? "mp4" : "webm"),
+            { type: mime },
+          ),
+        );
+      };
+      r.start();
+      setRecording(true);
+    } catch (e) {
+      stream.current?.getTracks().forEach((t) => t.stop());
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const busy = progress !== null;
+  return (
+    <>
+      <div className="section-title">
+        <span className="eyebrow">02 / SEE THE WHOLE PICTURE</span>
+        <h1>Every angle matters.</h1>
+        <p>One camera. Three views. A clearer picture of how you move.</p>
+      </div>
+      <div className="capture-layout">
+        <section className="panel upload-panel">
+          <div className="panel-heading">
+            <h2>Add a recording</h2>
+            <span>Any camera · local analysis</span>
+          </div>
+          <div className="view-tabs" role="group" aria-label="Recording view">
+            {(["left", "right", "front", "rear"] as View[]).map((v) => (
+              <button
+                disabled={busy || recording}
+                key={v}
+                className={view === v ? "selected" : ""}
+                onClick={() => setView(v)}
+              >
+                {v === "left"
+                  ? "Left side"
+                  : v === "right"
+                    ? "Right side"
+                    : v === "front"
+                      ? "Front"
+                      : "Rear"}
+              </button>
+            ))}
+          </div>
+          <label className={"dropzone " + (file ? "has-file" : "")}>
+            <input
+              type="file"
+              accept="video/*"
+              disabled={busy || recording}
+              onChange={(e) => {
+                void select(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <div className="upload-icon">
+              <Upload size={28} />
+            </div>
+            <h3>{file ? file.name : "Bring your ride into focus"}</h3>
+            <p>
+              {file
+                ? `${duration.toFixed(1)} seconds · ${(file.size / 1e6).toFixed(1)} MB`
+                : "Choose a video from your computer"}
+            </p>
+            <span className="small-button">
+              {file ? "Choose another video" : "Browse videos"}{" "}
+              <ArrowUpRight size={14} />
+            </span>
+            <small>
+              Phone, action camera, webcam or existing footage.
+              <br />
+              Browser-decodable MP4, WebM and other formats.
+            </small>
+          </label>
+          <div className="camera-row">
+            <span>Or record with a connected camera</span>
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() =>
+                recording ? recorder.current?.stop() : void record()
+              }
+            >
+              <Camera size={16} />
+              {recording ? "Stop recording" : "Use camera"}
+            </button>
+          </div>
+          <video
+            ref={camera}
+            muted
+            playsInline
+            className={recording ? "camera-preview" : "hidden"}
+          />
+          {file && (
+            <>
+              <div className="form-grid trim">
+                <Field label="Start time · seconds">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    disabled={busy}
+                    value={start}
+                    onChange={(e) => setStart(+e.target.value)}
+                  />
+                </Field>
+                <Field
+                  label="End time · seconds"
+                  hint="Select 8–30 seconds of steady pedaling."
+                >
+                  <input
+                    type="number"
+                    max={duration}
+                    step="0.1"
+                    disabled={busy}
+                    value={end}
+                    onChange={(e) => setEnd(+e.target.value)}
+                  />
+                </Field>
+              </div>
+              <Check
+                label="Keep this video in local browser storage (optional)"
+                checked={retain}
+                onChange={setRetain}
+              />
+              <small className="muted">
+                Otherwise only measurements are saved; reattach the original
+                video after closing the app.
+              </small>
+            </>
+          )}
+          {error && <Notice tone="warning">{error}</Notice>}
+          {busy ? (
+            <div className="analysis-progress">
+              <div>
+                <strong>
+                  {progress === 0
+                    ? "Loading local pose model…"
+                    : `Analyzing frames · ${Math.round(progress * 100)}%`}
+                </strong>
+                <button
+                  className="text-button"
+                  onClick={() => abort.current?.abort()}
+                >
+                  Cancel
+                </button>
+              </div>
+              <progress max="1" value={progress!} />
+            </div>
+          ) : (
+            <button
+              className="primary full"
+              disabled={!file || recording}
+              onClick={() => void run()}
+            >
+              Analyze {view} view <ArrowUpRight size={17} />
+            </button>
+          )}
+        </section>
+        <aside>
+          <section className="guide">
+            <span className="eyebrow">A GOOD RECORDING</span>
+            <h2>
+              Make the movement
+              <br />
+              easy to see.
+            </h2>
+            <ol>
+              <li>
+                <strong>Ride steadily</strong>
+                <p>
+                  Use a secure trainer. Warm up, then pedal comfortably at your
+                  normal effort.
+                </p>
+              </li>
+              <li>
+                <strong>Place the camera squarely</strong>
+                <p>
+                  Keep it level near hip height, far enough away to include your
+                  head, hands and feet. Avoid ultra-wide lenses.
+                </p>
+              </li>
+              <li>
+                <strong>Keep the setup consistent</strong>
+                <p>
+                  Record each view without changing the bike. Use your usual
+                  shoes and hand position.
+                </p>
+              </li>
+            </ol>
+            <details>
+              <summary>Tips for phone recordings</summary>
+              <p>
+                Support the phone, use the rear camera and good lighting.
+                Landscape usually frames the rider well; portrait also works.
+                Transfer the original file without messaging-app compression.
+              </p>
+            </details>
+            <details>
+              <summary>Video will not open?</summary>
+              <p>
+                HEVC support varies by browser. Use{" "}
+                <a
+                  href="https://handbrake.fr/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  HandBrake
+                </a>{" "}
+                locally to convert a copy to H.264 MP4. No upload is needed.
+              </p>
+            </details>
+          </section>
+          <div className="privacy-note">
+            <span className="status-dot" /> Your videos stay on this computer.
+          </div>
+        </aside>
+      </div>
+      <section className="panel">
+        <div className="panel-heading">
+          <h2>Your recordings</h2>
+          <span>Setup {revision + 1}</span>
+        </div>
+        {!clips.length ? (
+          <div className="empty-inline">
+            <Film />
+            <p>Your analyzed recordings will appear here.</p>
+          </div>
+        ) : (
+          <div className="clip-list">
+            {clips.map((c) => (
+              <button key={c.id} onClick={() => onReview(c)}>
+                <Film size={20} />
+                <span>
+                  <strong>{c.view} view</strong>
+                  <small>
+                    {c.name} · Setup {c.setupRevision + 1}
+                  </small>
+                </span>
+                <span className="clip-status">
+                  {c.quality.some((q) => q.severity === "reject") ? (
+                    "Needs a new recording"
+                  ) : c.reviewed ? (
+                    <>
+                      <CheckCircle2 size={15} />
+                      Reviewed
+                    </>
+                  ) : (
+                    "Review tracking"
+                  )}
+                </span>
+                <ArrowUpRight size={16} />
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+      <div className="footer-actions">
+        <p>At least one side, front and rear view for the full assessment.</p>
+        <button className="primary" onClick={onNext} disabled={busy}>
+          See fit report →
+        </button>
+      </div>
+    </>
+  );
 }

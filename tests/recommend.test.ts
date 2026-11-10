@@ -1,11 +1,75 @@
-import {it,expect} from 'vitest';
-import {recommend} from '../src/fit/recommend';
-import {defaultIntake,type ClipAnalysis} from '../src/domain/types';
-const intake={...defaultIntake,screen:'none' as const};
-export const clips:ClipAnalysis[]=(['left','front','rear'] as const).map(view=>({id:view,view,name:view,size:1,duration:10,width:100,height:100,frames:[],metrics:[{id:'knee-min',label:'Knee',value:10,unit:'°',sampleCount:4,confidence:'moderate',limitations:[]}],quality:[],modelVersion:'test',createdAt:'now',setupRevision:0,reviewed:true}));
-it('missing views cannot yield an adjustment',()=>{const r=recommend(intake,clips.slice(0,1),[]);expect(r.some(x=>x.outcome==='information')).toBe(true);expect(r.some(x=>x.outcome==='experiment')).toBe(false);});
-it('urgent symptoms override apparently good clips',()=>expect(recommend({...intake,screen:'urgent-knee'},clips,[])[0]?.urgency).toBe('urgent'));
-it('rejected clips cannot support an adjustment',()=>expect(recommend(intake,clips.map(c=>({...c,quality:[{code:'visibility',severity:'reject',message:''}]})),[]).some(x=>x.outcome==='information')).toBe(true));
-it('comfortable riders are not forced into target angles',()=>expect(recommend(intake,clips,[]).some(x=>x.outcome==='no-change')).toBe(true));
-it('unreviewed overlay blocks prescriptions',()=>expect(recommend({...intake,symptom:'knee'},clips.map(c=>({...c,reviewed:false})),[]).some(x=>x.outcome==='experiment')).toBe(false));
-it('a direction experiment never fabricates a millimeter correction',()=>{const r=recommend({...intake,symptom:'knee',mechanicalLimits:true},clips,[]);expect(r.some(x=>x.outcome==='experiment')).toBe(true);expect(r.find(x=>x.outcome==='experiment')?.action).not.toMatch(/\d+\s*mm/);});
+import { it, expect } from "vitest";
+import { recommend } from "../src/fit/recommend";
+import { defaultIntake, type ClipAnalysis } from "../src/domain/types";
+const intake = { ...defaultIntake, screen: "none" as const };
+export const clips: ClipAnalysis[] = (["left", "front", "rear"] as const).map(
+  (view) => ({
+    id: view,
+    view,
+    name: view,
+    size: 1,
+    duration: 10,
+    width: 100,
+    height: 100,
+    frames: [],
+    metrics: [
+      {
+        id: "knee-min",
+        label: "Knee",
+        value: 10,
+        unit: "°",
+        sampleCount: 4,
+        confidence: "moderate",
+        limitations: [],
+      },
+    ],
+    quality: [],
+    modelVersion: "test",
+    createdAt: "now",
+    setupRevision: 0,
+    reviewed: true,
+  }),
+);
+it("missing views cannot yield an adjustment", () => {
+  const r = recommend(intake, clips.slice(0, 1), []);
+  expect(r.some((x) => x.outcome === "information")).toBe(true);
+  expect(r.some((x) => x.outcome === "experiment")).toBe(false);
+});
+it("urgent symptoms override apparently good clips", () =>
+  expect(
+    recommend({ ...intake, screen: "urgent-knee" }, clips, [])[0]?.urgency,
+  ).toBe("urgent"));
+it("rejected clips cannot support an adjustment", () =>
+  expect(
+    recommend(
+      intake,
+      clips.map((c) => ({
+        ...c,
+        quality: [{ code: "visibility", severity: "reject", message: "" }],
+      })),
+      [],
+    ).some((x) => x.outcome === "information"),
+  ).toBe(true));
+it("comfortable riders are not forced into target angles", () =>
+  expect(
+    recommend(intake, clips, []).some((x) => x.outcome === "no-change"),
+  ).toBe(true));
+it("unreviewed overlay blocks prescriptions", () =>
+  expect(
+    recommend(
+      { ...intake, symptom: "knee" },
+      clips.map((c) => ({ ...c, reviewed: false })),
+      [],
+    ).some((x) => x.outcome === "experiment"),
+  ).toBe(false));
+it("a direction experiment never fabricates a millimeter correction", () => {
+  const r = recommend(
+    { ...intake, symptom: "knee", mechanicalLimits: true },
+    clips,
+    [],
+  );
+  expect(r.some((x) => x.outcome === "experiment")).toBe(true);
+  expect(r.find((x) => x.outcome === "experiment")?.action).not.toMatch(
+    /\d+\s*mm/,
+  );
+});

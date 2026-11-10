@@ -1,10 +1,32 @@
-import {mkdir,cp,writeFile,readFile} from 'node:fs/promises';
-import {createHash} from 'node:crypto';
-await mkdir('public/models',{recursive:true});
-await cp('node_modules/@mediapipe/tasks-vision/wasm','public/wasm',{recursive:true});
-const url='https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
-const response=await fetch(url);if(!response.ok)throw Error(`Model download: ${response.status}`);
-const data=Buffer.from(await response.arrayBuffer());await writeFile('public/models/pose.task',data);
-const checksum=createHash('sha256').update(data).digest('hex');
-await writeFile('public/models/manifest.json',JSON.stringify({url,sha256:checksum,model:'pose_landmarker_full/float16/1',runtime:JSON.parse(await readFile('node_modules/@mediapipe/tasks-vision/package.json','utf8')).version},null,2));
+import { mkdir, cp, writeFile, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+await mkdir("public/models", { recursive: true });
+await cp("node_modules/@mediapipe/tasks-vision/wasm", "public/wasm", {
+  recursive: true,
+});
+const url =
+  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
+const response = await fetch(url);
+if (!response.ok) throw Error(`Model download: ${response.status}`);
+const data = Buffer.from(await response.arrayBuffer());
+await writeFile("public/models/pose.task", data);
+const checksum = createHash("sha256").update(data).digest("hex");
+await writeFile(
+  "public/models/manifest.json",
+  JSON.stringify(
+    {
+      url,
+      sha256: checksum,
+      model: "pose_landmarker_full/float16/1",
+      runtime: JSON.parse(
+        await readFile(
+          "node_modules/@mediapipe/tasks-vision/package.json",
+          "utf8",
+        ),
+      ).version,
+    },
+    null,
+    2,
+  ),
+);
 console.log(`Local model ready (${data.length} bytes), SHA256 ${checksum}`);

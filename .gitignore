@@ -5,3 +5,4 @@ public/wasm/
 .superpowers/
 *.log
 verification/
+*.tsbuildinfo
