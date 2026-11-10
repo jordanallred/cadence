@@ -1394,3 +1394,75 @@ dd {
 .framing-label.line {
   top: calc(62% + 4px);
 }
+.phone-link {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  background: #fff;
+}
+.phone-link-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green);
+}
+.phone-link-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.phone-link-body {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 10px;
+}
+.phone-link-body img {
+  flex: none;
+  box-sizing: content-box;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  image-rendering: pixelated;
+  border-radius: 6px;
+}
+.phone-link-body p {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.phone-inbox {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.phone-inbox li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--lime);
+}
+.phone-inbox li > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.phone-inbox small {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.warning-text {
+  color: #8a2f17;
+}
+@media (max-width: 520px) {
+  .phone-link-body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
