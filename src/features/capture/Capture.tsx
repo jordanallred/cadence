@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect } from "react";
 import { Upload, Camera, CheckCircle2, Film, ArrowUpRight } from "lucide-react";
 import type { ClipAnalysis, View } from "../../domain/types";
-import { analyze } from "../../analysis/run";
+import { analyze, findSteadyPedaling } from "../../analysis/run";
+import { beep } from "./beep";
 import { openVideo } from "../../video/sample";
 import { Field, Check, Notice } from "../../components/Fields";
 import { PhoneLink } from "./PhoneLink";
@@ -13,6 +14,10 @@ const VIEW_HINTS: Record<View, string> = {
     "Camera directly ahead at hip height, centred on the bike. Shows knee tracking and shoulder movement.",
   rear: "Camera directly behind at hip height, centred on the bike. Shows pelvic rocking and knee tracking.",
 };
+/** Webcam recording: seconds to get on the bike, then seconds recorded. */
+const COUNTDOWN_SECONDS = 10;
+const RECORD_SECONDS = 20;
+const fmt = (n: number) => (Math.round(n * 10) / 10).toFixed(1);
 export function Capture({
   clips,
   revision,
@@ -34,8 +39,14 @@ export function Capture({
     [retain, setRetain] = useState(false),
     [error, setError] = useState(""),
     [progress, setProgress] = useState<number | null>(null),
-    [recording, setRecording] = useState(false);
+    [recording, setRecording] = useState(false),
+    [countdown, setCountdown] = useState<number | null>(null),
+    [elapsed, setElapsed] = useState(0),
+    [scan, setScan] = useState<number | null>(null),
+    [trimNote, setTrimNote] = useState("");
   const abort = useRef<AbortController | null>(null),
+    scanAbort = useRef<AbortController | null>(null),
+    timer = useRef<ReturnType<typeof setInterval> | null>(null),
     camera = useRef<HTMLVideoElement>(null),
     recorder = useRef<MediaRecorder | null>(null),
     stream = useRef<MediaStream | null>(null),
@@ -43,16 +54,20 @@ export function Capture({
   useEffect(
     () => () => {
       abort.current?.abort();
+      scanAbort.current?.abort();
+      if (timer.current) clearInterval(timer.current);
       if (recorder.current?.state === "recording") recorder.current.stop();
       stream.current?.getTracks().forEach((t) => t.stop());
       generation.current++;
     },
     [],
   );
-  const select = async (f?: File) => {
+  const select = async (f?: File, forView: View = view) => {
     if (!f) return;
     const gen = ++generation.current;
+    scanAbort.current?.abort();
     setError("");
+    setTrimNote("");
     setFile(undefined);
     try {
       const opened = await openVideo(f);
@@ -62,7 +77,39 @@ export function Capture({
       setFile(f);
       setDuration(d);
       setStart(0);
-      setEnd(Math.min(15, d));
+      setEnd(Math.min(20, d));
+      if (d < 8) return;
+      // Find the steady pedaling so getting on and off the bike is trimmed.
+      const controller = new AbortController();
+      scanAbort.current = controller;
+      setScan(0);
+      try {
+        const seg = await findSteadyPedaling(
+          f,
+          forView,
+          setScan,
+          controller.signal,
+        );
+        if (gen !== generation.current) return;
+        if (seg) {
+          setStart(seg.start);
+          setEnd(seg.end);
+          setTrimNote(
+            `Cadence picked ${fmt(seg.start)}–${fmt(seg.end)} s of steady pedaling. Adjust the times if you need to.`,
+          );
+        } else
+          setTrimNote(
+            "Couldn't find 8 seconds of steady pedaling automatically. Set the start and end times yourself.",
+          );
+      } catch (e) {
+        if (gen === generation.current && !controller.signal.aborted)
+          setTrimNote(
+            "Automatic trimming didn't work for this video. Set the start and end times yourself.",
+          );
+      } finally {
+        if (scanAbort.current === controller) scanAbort.current = null;
+        if (gen === generation.current) setScan(null);
+      }
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
     }
@@ -92,6 +139,16 @@ export function Capture({
       abort.current = null;
     }
   };
+  const stopTimer = () => {
+    if (timer.current) clearInterval(timer.current);
+    timer.current = null;
+  };
+  const cancelRecording = () => {
+    stopTimer();
+    setCountdown(null);
+    if (recorder.current?.state === "recording") recorder.current.stop();
+    else stream.current?.getTracks().forEach((t) => t.stop());
+  };
   const record = async () => {
     setError("");
     try {
@@ -119,6 +176,7 @@ export function Capture({
         if (e.data.size) chunks.push(e.data);
       };
       r.onstop = () => {
+        stopTimer();
         s.getTracks().forEach((t) => t.stop());
         setRecording(false);
         const mime = r.mimeType;
@@ -130,14 +188,44 @@ export function Capture({
           ),
         );
       };
-      r.start();
+      // Hands-free: count down while the rider gets on, beep, record for a
+      // fixed time, beep again and stop.
       setRecording(true);
+      let left = COUNTDOWN_SECONDS;
+      setCountdown(left);
+      timer.current = setInterval(() => {
+        left--;
+        if (left > 0) {
+          setCountdown(left);
+          if (left <= 3) beep(660, 120);
+          return;
+        }
+        stopTimer();
+        setCountdown(null);
+        beep(990, 450);
+        r.start(1000);
+        const began = Date.now();
+        setElapsed(0);
+        timer.current = setInterval(() => {
+          const t = (Date.now() - began) / 1000;
+          setElapsed(t);
+          if (t >= RECORD_SECONDS) {
+            beep(660, 300);
+            setTimeout(() => beep(660, 300), 380);
+            if (r.state === "recording") r.stop();
+          }
+        }, 250);
+      }, 1000);
     } catch (e) {
+      stopTimer();
+      setRecording(false);
+      setCountdown(null);
       stream.current?.getTracks().forEach((t) => t.stop());
       setError(e instanceof Error ? e.message : String(e));
     }
   };
   const busy = progress !== null;
+  const scanning = scan !== null;
   return (
     <>
       <div className="section-title">
@@ -200,16 +288,21 @@ export function Capture({
             </small>
           </label>
           <div className="camera-row">
-            <span>Or record with a connected camera</span>
+            <span>
+              Or record with a connected camera: {COUNTDOWN_SECONDS} s to get
+              on, then {RECORD_SECONDS} s recorded automatically
+            </span>
             <button
               className="secondary"
-              disabled={busy}
-              onClick={() =>
-                recording ? recorder.current?.stop() : void record()
-              }
+              disabled={busy || scanning}
+              onClick={() => (recording ? cancelRecording() : void record())}
             >
               <Camera size={16} />
-              {recording ? "Stop recording" : "Use camera"}
+              {countdown !== null
+                ? "Cancel"
+                : recording
+                  ? `Stop now · ${Math.max(0, Math.ceil(RECORD_SECONDS - elapsed))} s left`
+                  : "Record hands-free"}
             </button>
           </div>
           <div className={recording ? "camera-frame" : "hidden"}>
@@ -223,6 +316,15 @@ export function Capture({
               <rect x="6" y="6" width="88" height="88" rx="2" />
               <line x1="0" y1="62" x2="100" y2="62" />
             </svg>
+            {countdown !== null && (
+              <span className="countdown" aria-live="assertive">
+                {countdown}
+                <small>Get on and start pedaling</small>
+              </span>
+            )}
+            {countdown === null && recording && (
+              <span className="recording-dot">● Recording</span>
+            )}
             <span className="framing-label top">
               Keep head, hands and both feet inside the box
             </span>
@@ -236,18 +338,36 @@ export function Capture({
             disabled={busy || recording}
             onFile={(f, v) => {
               setView(v);
-              void select(f);
+              void select(f, v);
             }}
           />
           {file && (
             <>
+              {scanning ? (
+                <div className="analysis-progress">
+                  <div>
+                    <strong>
+                      Finding steady pedaling · {Math.round(scan * 100)}%
+                    </strong>
+                    <button
+                      className="text-button"
+                      onClick={() => scanAbort.current?.abort()}
+                    >
+                      Set times myself
+                    </button>
+                  </div>
+                  <progress max="1" value={scan} />
+                </div>
+              ) : (
+                trimNote && <p className="trim-note">{trimNote}</p>
+              )}
               <div className="form-grid trim">
                 <Field label="Start time · seconds">
                   <input
                     type="number"
                     min="0"
                     step="0.1"
-                    disabled={busy}
+                    disabled={busy || scanning}
                     value={start}
                     onChange={(e) => setStart(+e.target.value)}
                   />
@@ -260,7 +380,7 @@ export function Capture({
                     type="number"
                     max={duration}
                     step="0.1"
-                    disabled={busy}
+                    disabled={busy || scanning}
                     value={end}
                     onChange={(e) => setEnd(+e.target.value)}
                   />
@@ -298,7 +418,7 @@ export function Capture({
           ) : (
             <button
               className="primary full"
-              disabled={!file || recording}
+              disabled={!file || recording || scanning}
               onClick={() => void run()}
             >
               Analyze {view} view <ArrowUpRight size={17} />
