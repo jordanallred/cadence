@@ -22,7 +22,7 @@ After `npm run build`, the app can be installed from the browser (Install app in
 
 To build the single-file launcher yourself (needs Go 1.22+): `npm run build` then `npm run build:desktop` (add `-- --all` for every platform). Output is in `release/`. Publishing a release: push a tag such as `v0.2.0`; `.github/workflows/release.yml` builds and attaches every download.
 
-Use `Start-Cadence.ps1` for a guided local launch. Stop the terminal with Ctrl+C when done. Run `npm test` and `npm run build` to verify; `npm run preview` serves the build. Keep the same hostname and port to access the same browser storage.
+Use `Start-Cadence.ps1` for a guided local launch. Stop the terminal with Ctrl+C when done. Run `npm test` and `npm run build` to verify; `npm run preview` serves the build. In the development server, keep the same hostname and port to see the same browser storage; the desktop launcher also saves fit history to disk.
 
 ## Workflow
 
@@ -31,7 +31,7 @@ Use `Start-Cadence.ps1` for a guided local launch. Stop the terminal with Ctrl+C
 3. Review overlays throughout each recording. Correct an isolated joint or re-record widespread tracking problems. Corrections retain original landmarks.
 4. Read the ranked report: saddle height first (with a millimetre estimate when your saddle height is in your profile), then reach and drop, then knee tracking. The engine may also advise no change, more information or professional assessment.
 5. Log one measured change, re-record and add ride feedback. Keep an improvement or revert; the baseline and event history remain intact.
-6. Export a JSON backup or print the report. Original videos are not in JSON backups. Retention in browser storage is optional; retain originals separately.
+6. Back up one fit or all fits as JSON, or print the report. Original videos are not in JSON backups. Retention in browser storage is optional; retain originals separately.
 
 ## Honest boundaries
 

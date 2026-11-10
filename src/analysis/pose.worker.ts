@@ -4,12 +4,13 @@ let model: PoseLandmarker | null = null;
 // MediaPipe loads its wasm glue with importScripts, which module workers
 // lack. It then falls back to self.import(url), so run the glue as a
 // classic script here; its top-level `var ModuleFactory` becomes global.
-(self as unknown as { import: (url: string) => Promise<void> }).import =
-  async (url: string) => {
-    const r = await fetch(url);
-    if (!r.ok) throw Error("Could not load the pose engine (" + r.status + ").");
-    (0, eval)(await r.text());
-  };
+(self as unknown as { import: (url: string) => Promise<void> }).import = async (
+  url: string,
+) => {
+  const r = await fetch(url);
+  if (!r.ok) throw Error("Could not load the pose engine (" + r.status + ").");
+  (0, eval)(await r.text());
+};
 self.onmessage = async (e: MessageEvent) => {
   const { id, bitmap, timeMs, base } = e.data;
   try {
