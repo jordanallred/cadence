@@ -49,9 +49,12 @@ export async function diskPut(s: Session) {
 
 export async function diskDelete(id: string) {
   if (!available) return;
-  await fetch("/api/store/sessions/" + encodeURIComponent(id), {
+  const r = await fetch("/api/store/sessions/" + encodeURIComponent(id), {
     method: "DELETE",
   });
+  // Without this, a failed delete would quietly bring the fit back on the
+  // next start, because the disk copy would still be there.
+  if (!r.ok) throw Error("Could not delete from disk: " + (await r.text()));
 }
 
 /**
