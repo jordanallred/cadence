@@ -98,3 +98,20 @@ it("adds ankle, elbow and shoulder measurements when visible", () => {
   ])
     expect(ids).toContain(id);
 });
+it("picks a report frame at full knee extension", () => {
+  const { frames, truthMin } = rider({});
+  const { keyframeMs } = measureClip(frames, "left", W, H);
+  const f = frames.find((x) => x.timeMs === keyframeMs)!;
+  expect(f).toBeDefined();
+  const [h, k, a] = [23, 25, 27].map((j) => f.points[j]);
+  const v1 = [(h.x - k.x) * W, (h.y - k.y) * H],
+    v2 = [(a.x - k.x) * W, (a.y - k.y) * H];
+  const inside =
+    (Math.acos(
+      (v1[0] * v2[0] + v1[1] * v2[1]) / Math.hypot(...v1) / Math.hypot(...v2),
+    ) *
+      180) /
+    Math.PI;
+  // Sampled at 30 Hz, so within a frame of the true extreme.
+  expect(Math.abs(180 - inside - truthMin)).toBeLessThan(2);
+});
