@@ -2,7 +2,11 @@
 
 A free, local bike-fitting workspace: rider context, side/front/rear video analysis, overlay review and corrections, evidence-linked reports, adjustment history, and ride feedback.
 
-## Run on your PC
+## Download
+
+Get the latest build for Windows, macOS or Linux from the Releases page. Unzip, run `cadence`, and it opens in your browser. See [docs/download.md](docs/download.md). No install, account or Node.js needed.
+
+## Build from source
 
 Install Node.js 22.12+ (Node 24 recommended). From this folder:
 
@@ -15,6 +19,8 @@ npm run dev
 Open http://127.0.0.1:5173 . The model downloads from Google's official storage during setup. Videos are processed locally; there is no account or paid inference service. Once dependencies and models are present, local operation needs no internet. Fonts are bundled locally.
 
 After `npm run build`, the app can be installed from the browser (Install app in Chrome or Edge) and works offline once the model has loaded once. Hosting the `dist` folder on any static host gives the same app at a URL; analysis still runs entirely in the visitor's browser. Nothing has been published.
+
+To build the single-file launcher yourself (needs Go 1.22+): `npm run build` then `npm run build:desktop` (add `-- --all` for every platform). Output is in `release/`. Publishing a release: push a tag such as `v0.2.0`; `.github/workflows/release.yml` builds and attaches every download.
 
 Use `Start-Cadence.ps1` for a guided local launch. Stop the terminal with Ctrl+C when done. Run `npm test` and `npm run build` to verify; `npm run preview` serves the build. Keep the same hostname and port to access the same browser storage.
 
@@ -39,4 +45,4 @@ Browser storage may be cleared or run out of space. Save backups. Records contai
 
 `src/analysis`: pose worker and geometry; `src/video`: decoding/sampling; `src/fit`: versioned context/recommendation/history logic; `src/storage`: validated backups and IndexedDB; `src/features`: complete UI workflow. The evidence register labels product heuristics separately from research.
 
-Original application code is MIT licensed. Dependencies retain their licenses. Model weights are fetched separately and excluded from Git; verify their redistribution terms before public distribution. No public hosting or publication has been performed.
+Original application code is MIT licensed. Dependencies retain their licenses. Model weights are never included in Git or release downloads: the source setup and the launcher both fetch them from Google's MediaPipe storage and verify the SHA-256. No public hosting or publication has been performed.

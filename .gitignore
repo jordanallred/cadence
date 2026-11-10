@@ -6,3 +6,5 @@ public/wasm/
 *.log
 verification/
 *.tsbuildinfo
+desktop/web/
+release/
