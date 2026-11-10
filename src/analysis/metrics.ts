@@ -62,9 +62,10 @@ export function measureClip(
   view: View,
   w: number,
   h: number,
-): { metrics: Metric[]; quality: QualityIssue[] } {
+): { metrics: Metric[]; quality: QualityIssue[]; keyframeMs?: number } {
   const quality: QualityIssue[] = [],
     metrics: Metric[] = [];
+  let keyframeMs: number | undefined;
   const reject = (code: string, message: string) => ({
     metrics: [],
     quality: [...quality, { code, severity: "reject" as const, message }],
@@ -254,6 +255,23 @@ export function measureClip(
       mins.length,
       iqr(mins),
     );
+    // Representative frame for the report: the most extended moment of the
+    // cycle whose extension is closest to the median.
+    {
+      const target = median(mins);
+      let best = 1,
+        bestGap = Infinity;
+      mins.forEach((m, n) => {
+        if (Math.abs(m - target) < bestGap) {
+          bestGap = Math.abs(m - target);
+          best = n + 1;
+        }
+      });
+      let at = peaks[best - 1];
+      for (let n = peaks[best - 1]; n <= peaks[best]; n++)
+        if (!(flex[n] >= flex[at])) at = n;
+      keyframeMs = usable[at].timeMs;
+    }
     const bdc = peaks.slice(1).map((p) => flex[p]);
     add(
       "knee-bdc",
@@ -449,5 +467,7 @@ export function measureClip(
       iqr(shoulders),
     );
   }
-  return { metrics, quality };
+  return keyframeMs === undefined
+    ? { metrics, quality }
+    : { metrics, quality, keyframeMs };
 }

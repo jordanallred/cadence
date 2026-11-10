@@ -82,6 +82,29 @@ async function withPose<T>(
   }
 }
 
+/** A still of the video at `time` seconds, at most 720 px wide. */
+async function grab(
+  video: HTMLVideoElement,
+  time: number,
+  signal: AbortSignal,
+): Promise<string | undefined> {
+  try {
+    await seek(video, time, signal);
+    const scale = Math.min(1, 720 / video.videoWidth),
+      canvas = document.createElement("canvas");
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas
+      .getContext("2d")!
+      .drawImage(video, 0, 0, canvas.width, canvas.height);
+    const url = canvas.toDataURL("image/jpeg", 0.8);
+    return url.length < 600_000 ? url : undefined;
+  } catch (e) {
+    if (signal.aborted) throw e;
+    return undefined;
+  }
+}
+
 export async function analyze(
   file: File,
   view: View,
@@ -96,21 +119,37 @@ export async function analyze(
     (duration) => sampleTimes(duration, start, end),
     onProgress,
     signal,
-    (frames, video) => ({
-      id: crypto.randomUUID(),
-      view,
-      name: file.name,
-      size: file.size,
-      duration: video.duration,
-      width: video.videoWidth,
-      height: video.videoHeight,
-      frames,
-      ...measureClip(frames, view, video.videoWidth, video.videoHeight),
-      modelVersion: MODEL_VERSION,
-      createdAt: new Date().toISOString(),
-      setupRevision: revision,
-      reviewed: false,
-    }),
+    async (frames, video) => {
+      const { keyframeMs, ...measured } = measureClip(
+        frames,
+        view,
+        video.videoWidth,
+        video.videoHeight,
+      );
+      return {
+        id: crypto.randomUUID(),
+        view,
+        name: file.name,
+        size: file.size,
+        duration: video.duration,
+        width: video.videoWidth,
+        height: video.videoHeight,
+        frames,
+        ...measured,
+        ...(keyframeMs === undefined
+          ? {}
+          : {
+              keyframe: {
+                timeMs: keyframeMs,
+                image: await grab(video, keyframeMs / 1000, signal),
+              },
+            }),
+        modelVersion: MODEL_VERSION,
+        createdAt: new Date().toISOString(),
+        setupRevision: revision,
+        reviewed: false,
+      };
+    },
   );
 }
 

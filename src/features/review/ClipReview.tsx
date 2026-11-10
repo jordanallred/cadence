@@ -62,6 +62,16 @@ export function ClipReview({
     if (video.current && clip.frames[n])
       video.current.currentTime = clip.frames[n].timeMs / 1000;
   };
+  // The report keeps its original still frame; only the numbers change.
+  const remeasure = (frames: typeof clip.frames) => {
+    const { metrics, quality } = measureClip(
+      frames,
+      clip.view,
+      clip.width,
+      clip.height,
+    );
+    return { metrics, quality };
+  };
   const updatePoint = (p: Point) => {
     if (!frame || !frame.points[joints[joint]]) return;
     const frames = structuredClone(clip.frames);
@@ -72,7 +82,7 @@ export function ClipReview({
       originalFrames: clip.originalFrames ?? clip.frames,
       frames,
       reviewed: false,
-      ...measureClip(frames, clip.view, clip.width, clip.height),
+      ...remeasure(frames),
     });
   };
   return (
@@ -229,7 +239,7 @@ export function ClipReview({
                     frames,
                     originalFrames: undefined,
                     reviewed: false,
-                    ...measureClip(frames, clip.view, clip.width, clip.height),
+                    ...remeasure(frames),
                   });
                 }}
               >

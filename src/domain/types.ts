@@ -88,6 +88,18 @@ export const clipSchema = z.object({
   createdAt: z.string(),
   setupRevision: z.number().int().nonnegative(),
   reviewed: z.boolean(),
+  /** Frame shown in the report: knee at full extension (side views). */
+  keyframe: z
+    .object({
+      timeMs: z.number().nonnegative(),
+      /** JPEG data URL of that video frame, kept small. */
+      image: z
+        .string()
+        .startsWith("data:image/jpeg;base64,")
+        .max(600_000)
+        .optional(),
+    })
+    .optional(),
 });
 export type ClipAnalysis = z.infer<typeof clipSchema>;
 export const recommendationSchema = z.object({
