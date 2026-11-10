@@ -14,20 +14,22 @@ npm run dev
 
 Open http://127.0.0.1:5173 . The model downloads from Google's official storage during setup. Videos are processed locally; there is no account or paid inference service. Once dependencies and models are present, local operation needs no internet. Fonts are bundled locally.
 
+After `npm run build`, the app can be installed from the browser (Install app in Chrome or Edge) and works offline once the model has loaded once. Hosting the `dist` folder on any static host gives the same app at a URL; analysis still runs entirely in the visitor's browser. Nothing has been published.
+
 Use `Start-Cadence.ps1` for a guided local launch. Stop the terminal with Ctrl+C when done. Run `npm test` and `npm run build` to verify; `npm run preview` serves the build. Keep the same hostname and port to access the same browser storage.
 
 ## Workflow
 
 1. Fill in the profile, symptom check and known baseline settings. Unknown measurements stay blank.
-2. Import original video from any camera or use a connected webcam. Choose an 8–30 second segment of steady pedaling. Record one side plus front and rear without changing the setup between views.
+2. Record a side view first (the on-screen framing guide helps with webcam capture), then front and rear. Import original video from any camera. Choose an 8–30 second segment of steady pedaling.
 3. Review overlays throughout each recording. Correct an isolated joint or re-record widespread tracking problems. Corrections retain original landmarks.
-4. Read observations, alternatives, evidence and recommended next steps. The engine may advise no change, more information or professional assessment.
+4. Read the ranked report: saddle height first (with a millimetre estimate when your saddle height is in your profile), then reach and drop, then knee tracking. The engine may also advise no change, more information or professional assessment.
 5. Log one measured change, re-record and add ride feedback. Keep an improvement or revert; the baseline and event history remain intact.
 6. Export a JSON backup or print the report. Original videos are not in JSON backups. Retention in browser storage is optional; retain originals separately.
 
 ## Honest boundaries
 
-This is an experimental application, not an expert-validated or medically validated fitter. Automatic hardware experiments currently cover saddle-height direction for knee discomfort in road/mountain cycling. Other concerns receive a supported next step, not an invented prescription. The full user workflow exists, but comprehensive expert-level recommendation coverage and actual rider accuracy remain research work. See docs/evidence.md and docs/verification.md.
+This is an experimental application, not an expert-validated or medically validated fitter. Saddle-height advice uses a published dynamic knee-angle range; reach, drop and knee-tracking advice uses labelled product heuristics from common fitting practice. The measurement pipeline is verified against an exact synthetic pedaling model (mean knee-angle error 0.25°), but accuracy on real riders has not yet been measured. `docs/validation.md` and `npm run validate` give the protocol and tooling to do that. See docs/evidence.md.
 
 Video format support depends on the browser. H.264 MP4 and WebM are the main paths; HEVC varies. Use HandBrake locally to make a compatible copy when necessary. Measurements are projected 2D estimates. Separate clips are not simultaneous 3D capture.
 

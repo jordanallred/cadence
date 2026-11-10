@@ -1,0 +1,4 @@
+# Example only. Replace with your own reference measurements.
+clip,view,metric,reference
+rider01-left.mp4,left,knee-min,34
+rider01-left.mp4,left,torso,42

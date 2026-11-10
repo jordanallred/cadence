@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
-    "prepare:models": "node scripts/prepare-model.mjs"
+    "prepare:models": "node scripts/prepare-model.mjs",
+    "validate": "node scripts/validate.mjs",
+    "check": "tsc -b && vitest run"
   },
   "dependencies": {
     "@fontsource/dm-sans": "5.3.0",

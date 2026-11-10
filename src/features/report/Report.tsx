@@ -66,7 +66,9 @@ export function Report({
           <div key={String(name)}>
             <CheckCircle2 size={18} className={ok ? "green" : "muted"} />
             <strong>{name} view</strong>
-            <span>{ok ? "Reviewed" : "Needed"}</span>
+            <span>
+              {ok ? "Reviewed" : name === "Side" ? "Needed" : "Recommended"}
+            </span>
           </div>
         ))}
       </div>
@@ -95,7 +97,10 @@ export function Report({
                     <span className="chip">Later · one change at a time</span>
                   )}
                   {r.confidence && (
-                    <span className="chip">{r.confidence} confidence</span>
+                    <span className="chip">
+                      {r.confidence[0].toUpperCase() + r.confidence.slice(1)}{" "}
+                      confidence
+                    </span>
                   )}
                 </div>
               )}

@@ -4,6 +4,14 @@ import type { ClipAnalysis, View } from "../../domain/types";
 import { analyze } from "../../analysis/run";
 import { openVideo } from "../../video/sample";
 import { Field, Check, Notice } from "../../components/Fields";
+const VIEW_HINTS: Record<View, string> = {
+  left: "Camera square to the bike, 2–3 m away, lens level with the bottom bracket. Shows saddle height, reach and posture.",
+  right:
+    "Camera square to the bike, 2–3 m away, lens level with the bottom bracket. Shows saddle height, reach and posture.",
+  front:
+    "Camera directly ahead at hip height, centred on the bike. Shows knee tracking and shoulder movement.",
+  rear: "Camera directly behind at hip height, centred on the bike. Shows pelvic rocking and knee tracking.",
+};
 export function Capture({
   clips,
   revision,
@@ -91,7 +99,11 @@ export function Capture({
           "Camera capture is not supported here. Import a video instead.",
         );
       const s = await navigator.mediaDevices.getUserMedia({
-        video: true,
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 60 },
+        },
         audio: false,
       });
       stream.current = s;
@@ -156,6 +168,7 @@ export function Capture({
               </button>
             ))}
           </div>
+          <p className="view-hint">{VIEW_HINTS[view]}</p>
           <label className={"dropzone " + (file ? "has-file" : "")}>
             <input
               type="file"
@@ -198,12 +211,26 @@ export function Capture({
               {recording ? "Stop recording" : "Use camera"}
             </button>
           </div>
-          <video
-            ref={camera}
-            muted
-            playsInline
-            className={recording ? "camera-preview" : "hidden"}
-          />
+          <div className={recording ? "camera-frame" : "hidden"}>
+            <video ref={camera} muted playsInline className="camera-preview" />
+            <svg
+              className="framing-guide"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <rect x="6" y="6" width="88" height="88" rx="2" />
+              <line x1="0" y1="62" x2="100" y2="62" />
+            </svg>
+            <span className="framing-label top">
+              Keep head, hands and both feet inside the box
+            </span>
+            <span className="framing-label line">
+              {view === "left" || view === "right"
+                ? "Camera level with the pedals' lowest point"
+                : "Camera at hip height, centred on the bike"}
+            </span>
+          </div>
           {file && (
             <>
               <div className="form-grid trim">
@@ -369,7 +396,9 @@ export function Capture({
         )}
       </section>
       <div className="footer-actions">
-        <p>At least one side, front and rear view for the full assessment.</p>
+        <p>
+          Start with a side view. Add front and rear views for knee tracking.
+        </p>
         <button className="primary" onClick={onNext} disabled={busy}>
           See fit report →
         </button>

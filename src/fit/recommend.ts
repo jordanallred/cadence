@@ -288,7 +288,8 @@ export function recommend(
                 direction: "raise",
                 minMm: 5,
                 maxMm: 10,
-                basis: "Typical spacer increment.",
+                basis:
+                  "One or two 5 mm spacers, or a stem 10 mm shorter instead.",
               },
       },
     );

@@ -1,0 +1,13 @@
+{
+  "name": "Cadence — Bike Fit",
+  "short_name": "Cadence",
+  "description": "Free, private bike fitting from your own videos. Analysis runs on your device.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f5",
+  "theme_color": "#133e35",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
