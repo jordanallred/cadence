@@ -23,10 +23,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -48,20 +50,22 @@ const (
 func main() {
 	port := flag.Int("port", defaultPort, "local port to serve on")
 	noBrowser := flag.Bool("no-browser", false, "do not open a browser window")
+	noPhone := flag.Bool("no-phone", false, "turn off sending videos from a phone on your Wi-Fi")
+	lanIP := flag.String("lan-ip", "", "network address for the phone link, if the automatic choice is wrong (e.g. with a VPN)")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("Cadence", version)
 		return
 	}
-	if err := run(*port, !*noBrowser); err != nil {
+	if err := run(*port, !*noBrowser, !*noPhone, *lanIP); err != nil {
 		fmt.Fprintln(os.Stderr, "Cadence could not start:", err)
 		pause()
 		os.Exit(1)
 	}
 }
 
-func run(port int, openBrowser bool) error {
+func run(port int, openBrowser, phone bool, lanIP string) error {
 	fmt.Printf("Cadence %s — free, private bike fitting\n\n", version)
 	modelPath, err := ensureModel()
 	if err != nil {
@@ -84,6 +88,23 @@ func run(port int, openBrowser bool) error {
 		}
 		return fmt.Errorf("port %d is in use by another program; try --port %d (saved sessions are tied to the port)", port, port+1)
 	}
+	link := &phoneLink{err: "Phone link is turned off (--no-phone)."}
+	if phone {
+		link = startPhoneLink(port+1, lanIP)
+		if link.url != "" {
+			fmt.Println("Phone link ready on your Wi-Fi. Scan the QR code on the Recordings page.")
+		} else {
+			fmt.Println("Phone link unavailable:", link.err)
+		}
+	}
+	defer link.cleanup()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-stop
+		link.cleanup()
+		os.Exit(0)
+	}()
 	fmt.Println("Open", url, "if your browser does not open automatically.")
 	fmt.Println("Keep this window open while you use Cadence. Close it or press Ctrl+C to stop.")
 	if openBrowser {
@@ -92,10 +113,14 @@ func run(port int, openBrowser bool) error {
 			_ = browse(url)
 		}()
 	}
-	return http.Serve(ln, handler(site, modelPath))
+	return http.Serve(ln, handler(site, modelPath, link, port))
 }
 
-func handler(site fs.FS, modelPath string) http.Handler {
+func handler(site fs.FS, modelPath string, link *phoneLink, port int) http.Handler {
+	allowedHosts := map[string]bool{
+		fmt.Sprintf("127.0.0.1:%d", port): true,
+		fmt.Sprintf("localhost:%d", port): true,
+	}
 	_ = mime.AddExtensionType(".wasm", "application/wasm")
 	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
 	_ = mime.AddExtensionType(".task", "application/octet-stream")
@@ -103,6 +128,15 @@ func handler(site fs.FS, modelPath string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
+		// Reject other host names so a web page cannot reach this server
+		// through DNS rebinding.
+		if !allowedHosts[r.Host] {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		if link.localHandler(w, r) {
+			return
+		}
 		switch r.URL.Path {
 		case healthPath:
 			fmt.Fprint(w, "cadence")

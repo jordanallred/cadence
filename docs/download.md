@@ -10,6 +10,24 @@
    MediaPipe storage and checks its fingerprint. After that, Cadence works
    offline.
 
+## Sending videos from your phone
+
+On the **Recordings** page, Cadence shows a QR code under "From your phone".
+Scan it with your phone's camera, pick the view, then **Record video** or
+**Choose from your phone**. The video travels over your Wi-Fi straight to
+Cadence on your computer, where it appears with a **Use this video** button.
+
+- Phone and computer must be on the same Wi-Fi or network.
+- The first time, Windows may ask whether Cadence can use the network: allow
+  it on **private** networks.
+- The link contains a secret that changes every time Cadence starts, so only
+  someone who can see your screen can send videos. Videos are kept in a
+  temporary folder until you use or discard them, and deleted when Cadence
+  closes.
+- On a VPN or with several network adapters, start Cadence with
+  `--lan-ip 192.168.x.y` (your computer's Wi-Fi address). `--no-phone` turns
+  the feature off.
+
 Everything stays on your computer. Videos are analyzed in your browser and
 nothing is uploaded. Sessions are saved in that browser, so use the same
 browser each time and export backups.

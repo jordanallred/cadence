@@ -4,7 +4,7 @@ A free, local bike-fitting workspace: rider context, side/front/rear video analy
 
 ## Download
 
-Get the latest build for Windows, macOS or Linux from the Releases page. Unzip, run `cadence`, and it opens in your browser. See [docs/download.md](docs/download.md). No install, account or Node.js needed.
+Get the latest build for Windows, macOS or Linux from the Releases page. Unzip, run `cadence`, and it opens in your browser. See [docs/download.md](docs/download.md). No install, account or Node.js needed. Scan the QR code on the Recordings page to send videos straight from your phone over Wi-Fi.
 
 ## Build from source
 

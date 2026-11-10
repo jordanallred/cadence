@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#133e35">
+<title>Send to Cadence</title>
+<style>
+  :root { --green:#164d3e; --ink:#233c35; --muted:#5f7068; --line:#dfe5de; --lime:#d6edb2; --bg:#f7f8f5; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width:480px; margin:0 auto; padding:20px 16px 40px; }
+  h1 { font-size:24px; margin:4px 0 4px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .views { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+  .views button { font:inherit; padding:14px 8px; border-radius:10px; border:1px solid var(--line); background:#fff; color:var(--ink); }
+  .views button[aria-pressed="true"] { background:var(--green); border-color:var(--green); color:#fff; font-weight:600; }
+  .tip { background:#fff; border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:16px; color:var(--muted); font-size:15px; }
+  label.big { display:block; text-align:center; padding:18px; border-radius:12px; font-weight:600; font-size:18px; margin-bottom:10px; cursor:pointer; }
+  label.primary { background:var(--green); color:#fff; }
+  label.secondary { background:#fff; color:var(--green); border:1px solid var(--line); }
+  label.disabled { opacity:.45; pointer-events:none; }
+  input[type=file] { position:absolute; width:1px; height:1px; opacity:0; }
+  .status { margin-top:16px; padding:14px; border-radius:10px; background:#fff; border:1px solid var(--line); display:none; }
+  .status.show { display:block; }
+  .status.ok { background:var(--lime); border-color:var(--lime); color:var(--green); }
+  .status.err { background:#fbe9e4; border-color:#f0c9bd; color:#8a2f17; }
+  progress { width:100%; height:10px; accent-color:var(--green); margin-top:8px; }
+  footer { color:var(--muted); font-size:13px; margin-top:24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Send a video to Cadence</h1>
+  <p class="sub">It goes straight to your computer over your Wi-Fi. Nothing is uploaded to the internet.</p>
+  <div class="views" role="group" aria-label="Which view is this?">
+    <button type="button" data-view="left" aria-pressed="true">Left side</button>
+    <button type="button" data-view="right" aria-pressed="false">Right side</button>
+    <button type="button" data-view="front" aria-pressed="false">Front</button>
+    <button type="button" data-view="rear" aria-pressed="false">Rear</button>
+  </div>
+  <div class="tip" id="tip"></div>
+  <label class="big primary" id="recordLabel">Record video
+    <input type="file" accept="video/*" capture="environment" id="record">
+  </label>
+  <label class="big secondary" id="pickLabel">Choose from your phone
+    <input type="file" accept="video/*" id="pick">
+  </label>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <footer>Keep this page and Cadence on your computer open while sending. Landscape, tripod, 60 fps if your camera offers it.</footer>
+</main>
+<script>
+(function () {
+  var tips = {
+    left: "Side view: phone on a tripod 2–3 m away, square to the bike, lens level with the bottom bracket. Head, hands and both feet in frame. Record 15–20 seconds of steady pedaling.",
+    right: "Side view: phone on a tripod 2–3 m away, square to the bike, lens level with the bottom bracket. Head, hands and both feet in frame. Record 15–20 seconds of steady pedaling.",
+    front: "Front view: directly ahead at hip height, centred on the bike. Record 15–20 seconds of steady pedaling.",
+    rear: "Rear view: directly behind at hip height, centred on the bike. Record 15–20 seconds of steady pedaling."
+  };
+  var view = "left", busy = false;
+  var buttons = document.querySelectorAll(".views button");
+  var tip = document.getElementById("tip"), status = document.getElementById("status");
+  function setView(v) {
+    view = v; tip.textContent = tips[v];
+    buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.view === v)); });
+  }
+  buttons.forEach(function (b) { b.addEventListener("click", function () { if (!busy) setView(b.dataset.view); }); });
+  setView("left");
+  function show(cls, html) { status.className = "status show " + cls; status.innerHTML = html; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+  function lock(on) {
+    busy = on;
+    ["recordLabel", "pickLabel"].forEach(function (id) { document.getElementById(id).classList.toggle("disabled", on); });
+  }
+  function send(input) {
+    var file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    lock(true);
+    show("", "Sending <strong>" + esc(file.name) + "</strong> (" + (file.size / 1e6).toFixed(1) + " MB)…<progress max='1' value='0'></progress>");
+    var bar = status.querySelector("progress");
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", location.pathname + "/upload?view=" + encodeURIComponent(view) + "&name=" + encodeURIComponent(file.name));
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.upload.onprogress = function (e) { if (e.lengthComputable) bar.value = e.loaded / e.total; };
+    xhr.onload = function () {
+      lock(false);
+      if (xhr.status === 200) show("ok", "Sent. On your computer, choose <strong>Use this video</strong> under “From your phone”. You can send another view now.");
+      else show("err", esc(xhr.responseText || "Sending failed.") );
+    };
+    xhr.onerror = function () { lock(false); show("err", "Could not reach your computer. Check both are on the same Wi-Fi and Cadence is still running."); };
+    xhr.send(file);
+  }
+  document.getElementById("record").addEventListener("change", function (e) { send(e.target); });
+  document.getElementById("pick").addEventListener("change", function (e) { send(e.target); });
+})();
+</script>
+</body>
+</html>

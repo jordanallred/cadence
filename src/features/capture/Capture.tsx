@@ -4,6 +4,7 @@ import type { ClipAnalysis, View } from "../../domain/types";
 import { analyze } from "../../analysis/run";
 import { openVideo } from "../../video/sample";
 import { Field, Check, Notice } from "../../components/Fields";
+import { PhoneLink } from "./PhoneLink";
 const VIEW_HINTS: Record<View, string> = {
   left: "Camera square to the bike, 2–3 m away, lens level with the bottom bracket. Shows saddle height, reach and posture.",
   right:
@@ -231,6 +232,13 @@ export function Capture({
                 : "Camera at hip height, centred on the bike"}
             </span>
           </div>
+          <PhoneLink
+            disabled={busy || recording}
+            onFile={(f, v) => {
+              setView(v);
+              void select(f);
+            }}
+          />
           {file && (
             <>
               <div className="form-grid trim">
