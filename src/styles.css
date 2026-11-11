@@ -1029,7 +1029,8 @@ dd {
 }
 .footer-tools {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 4px 18px;
 }
 .footer-tools button,
 .footer-tools label {
@@ -1040,6 +1041,7 @@ dd {
   border: 0;
   padding: 5px 0;
   font-size: 10px;
+  white-space: nowrap;
   color: #7c8e70;
   cursor: pointer;
 }
@@ -1260,7 +1262,7 @@ dd {
     font-size: 9px;
   }
   .footer-tools {
-    gap: 22px;
+    gap: 6px 22px;
   }
 }
 @media (prefers-reduced-motion: no-preference) {

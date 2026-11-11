@@ -98,3 +98,55 @@ export function mergeSessions(
   );
   return { merged, toLocal, toDisk, dropLocal };
 }
+
+/** True once diskList has found the desktop launcher's store. */
+export const diskAvailable = () => available === true;
+
+export type DiskVideo = { id: string; size: number };
+
+export async function diskVideoList(): Promise<DiskVideo[] | null> {
+  if (!available) return null;
+  const r = await fetch("/api/store/videos");
+  if (!r.ok) return null;
+  return ((await r.json()) as { videos: DiskVideo[] }).videos ?? [];
+}
+
+/** Saves a video to disk and returns the size the launcher wrote. */
+export async function diskPutVideo(id: string, file: Blob): Promise<number> {
+  const r = await fetch("/api/store/videos/" + encodeURIComponent(id), {
+    method: "PUT",
+    headers: {
+      "Content-Type": file.type.startsWith("video/")
+        ? file.type
+        : "application/octet-stream",
+    },
+    body: file,
+  });
+  if (!r.ok)
+    throw Error("Could not save the video to disk: " + (await r.text()));
+  return ((await r.json()) as DiskVideo).size;
+}
+
+export async function diskGetVideo(id: string): Promise<File | undefined> {
+  const r = await fetch("/api/store/videos/" + encodeURIComponent(id));
+  if (r.status === 404) return undefined;
+  if (!r.ok)
+    throw Error("Could not read the video from disk: " + (await r.text()));
+  const blob = await r.blob();
+  return new File([blob], id, { type: blob.type });
+}
+
+export async function diskHasVideo(id: string): Promise<boolean> {
+  const r = await fetch("/api/store/videos/" + encodeURIComponent(id), {
+    method: "HEAD",
+  });
+  return r.ok;
+}
+
+export async function diskDeleteVideo(id: string) {
+  const r = await fetch("/api/store/videos/" + encodeURIComponent(id), {
+    method: "DELETE",
+  });
+  if (!r.ok)
+    throw Error("Could not delete the video from disk: " + (await r.text()));
+}
