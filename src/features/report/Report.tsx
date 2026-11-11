@@ -10,6 +10,7 @@ import { evidence } from "../../fit/evidence";
 import { exportSession } from "../../storage/portable";
 import { Notice } from "../../components/Fields";
 import { PositionReport, positionMetrics } from "./Visuals";
+import { Comparison } from "./Comparison";
 export function Report({
   session,
   results,
@@ -76,6 +77,7 @@ export function Report({
           </div>
         ))}
       </div>
+      <Comparison session={session} />
       {side && <PositionReport clip={side} intake={session.intake} />}
       <div className="report-grid">
         <div>

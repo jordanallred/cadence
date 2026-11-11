@@ -26,7 +26,7 @@ type Angle = {
   reference?: "from";
 };
 
-const MOMENTS: Record<
+export const MOMENTS: Record<
   KeyMoment["position"],
   { tab: string; caption: string; metrics: string[] }
 > = {
@@ -45,7 +45,7 @@ const MOMENTS: Record<
 };
 
 /** Frames of this clip that can be drawn. */
-const stillsOf = (clip: ClipAnalysis) =>
+export const stillsOf = (clip: ClipAnalysis) =>
   (clip.keyframes ?? []).filter(
     (k) => k.image && clip.frames.some((f) => f.timeMs === k.timeMs),
   );
@@ -172,14 +172,17 @@ export function PositionReport({
   );
 }
 
-function MomentFigure({
+export function MomentFigure({
   clip,
   moment,
   caption,
+  short = false,
 }: {
   clip: ClipAnalysis;
   moment: KeyMoment;
   caption: string;
+  /** Show only the caption, without the note on how angles are drawn. */
+  short?: boolean;
 }) {
   const frame = clip.frames.find((f) => f.timeMs === moment.timeMs)!;
   // Rendered width, so labels stay readable when the frame is shown small.
@@ -359,9 +362,16 @@ function MomentFigure({
         )}
       </svg>
       <figcaption>
-        {caption} Frame at {(moment.timeMs / 1000).toFixed(1)} s. Angles are
-        medians across every stroke analyzed. Dashed lines show a straight limb
-        {moment.position === "extension" ? " or the horizontal" : ""}.
+        {short ? (
+          caption
+        ) : (
+          <>
+            {caption} Frame at {(moment.timeMs / 1000).toFixed(1)} s. Angles are
+            medians across every stroke analyzed. Dashed lines show a straight
+            limb
+            {moment.position === "extension" ? " or the horizontal" : ""}.
+          </>
+        )}
       </figcaption>
     </figure>
   );
