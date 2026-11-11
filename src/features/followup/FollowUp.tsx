@@ -155,8 +155,8 @@ export function FollowUp({
                 <Notice>{experiment.action}</Notice>
               ) : (
                 <p className="muted">
-                  Log a change you made with appropriate guidance. The app may
-                  recommend no change.
+                  Nothing to change right now. If you adjust something anyway,
+                  log it here so the next recording is compared with it.
                 </p>
               )}
               <Field label="Setting">

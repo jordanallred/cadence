@@ -256,7 +256,7 @@ export default function App() {
     urgent = context.find((r) => r.urgency !== "routine");
   return (
     <div className="app-shell">
-      <aside className="sidebar no-print">
+      <aside className="sidebar no-print" aria-label="Fit steps and saved fits">
         <a
           className="brand"
           href="#"
@@ -365,9 +365,23 @@ export default function App() {
               <ClipReview
                 key={selected.id}
                 clip={selected}
+                intake={session.intake}
                 file={files.current.get(selected.id)}
                 onUpdate={replaceClip}
                 onBack={() => setReview(null)}
+                onRemove={async () => {
+                  try {
+                    await deleteVideo(selected.id);
+                    files.current.delete(selected.id);
+                    update({
+                      ...session,
+                      clips: session.clips.filter((c) => c.id !== selected.id),
+                    });
+                    setReview(null);
+                  } catch (e) {
+                    setError(String(e));
+                  }
+                }}
                 onFile={(f) => {
                   files.current.set(selected.id, f);
                   setSession({ ...session });
@@ -509,26 +523,6 @@ export default function App() {
               Evidence & limitations
             </a>
           </p>
-          {step === 1 && selected && (
-            <button
-              className="text-button no-print"
-              onClick={async () => {
-                try {
-                  await deleteVideo(selected.id);
-                  files.current.delete(selected.id);
-                  update({
-                    ...session,
-                    clips: session.clips.filter((c) => c.id !== selected.id),
-                  });
-                  setReview(null);
-                } catch (e) {
-                  setError(String(e));
-                }
-              }}
-            >
-              Remove this recording and its stored video
-            </button>
-          )}
         </main>
       </div>
     </div>

@@ -1,8 +1,13 @@
-import { CheckCircle2, Printer, Info } from "lucide-react";
-import type { Session, Recommendation } from "../../domain/types";
+import { CheckCircle2, Circle, Printer, Info } from "lucide-react";
+import {
+  viewLabel,
+  type Session,
+  type Recommendation,
+} from "../../domain/types";
 import { evidence } from "../../fit/evidence";
 import { CLEAR_LEAD } from "../../fit/recommend";
 import { Notice } from "../../components/Fields";
+import { metricValue } from "../metricFormat";
 import { PositionReport, positionMetrics } from "./Visuals";
 import { Comparison } from "./Comparison";
 import { FitNumbers } from "./FitNumbers";
@@ -62,15 +67,20 @@ export function Report({
     (c) => (c.view === "left" || c.view === "right") && c.metrics.length,
   );
   const drawn = side ? positionMetrics(side) : new Set<string>();
+  const comfortable = session.intake.symptoms.length === 0;
   return (
     <>
       <div className="section-title report-title">
         <div>
           <h1>Fit report</h1>
           <p>
-            {session.intake.name || "Your rider profile"} ·{" "}
-            {session.intake.bike || "Your bike"} · Setup{" "}
-            {session.setupRevision + 1}
+            {[
+              session.intake.name.trim(),
+              session.intake.bike.trim(),
+              `Setup ${session.setupRevision + 1}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
         <div className="button-row no-print">
@@ -92,7 +102,11 @@ export function Report({
           ["Rear", selected.some((c) => c.view === "rear" && c.reviewed)],
         ].map(([name, ok]) => (
           <div key={String(name)}>
-            <CheckCircle2 size={18} className={ok ? "green" : "muted"} />
+            {ok ? (
+              <CheckCircle2 size={18} className="green" aria-hidden="true" />
+            ) : (
+              <Circle size={18} className="muted" aria-hidden="true" />
+            )}
             <strong>{name} view</strong>
             <span>
               {ok ? "Reviewed" : name === "Side" ? "Needed" : "Recommended"}
@@ -122,7 +136,11 @@ export function Report({
               {(r.priority || r.confidence) && (
                 <div className="chips">
                   {r.priority === 1 && (
-                    <span className="chip strong">Do this first</span>
+                    <span className="chip strong">
+                      {comfortable
+                        ? "First, if you change anything"
+                        : "Do this first"}
+                    </span>
                   )}
                   {r.priority && r.priority > 1 && (
                     <span className="chip">Later · one change at a time</span>
@@ -136,12 +154,19 @@ export function Report({
                 </div>
               )}
               <p>{r.observations}</p>
-              {r.estimate && (
-                <div className="estimate">
-                  <strong>{estimateText(r.estimate)}</strong>
-                  <small>{r.estimate.basis}</small>
-                </div>
-              )}
+              {r.estimate &&
+                (r.outcome === "no-change" ? (
+                  <p className="estimate-optional">
+                    If you decide to change it:{" "}
+                    <strong>{estimateText(r.estimate)}</strong>.{" "}
+                    {r.estimate.basis}
+                  </p>
+                ) : (
+                  <div className="estimate">
+                    <strong>{estimateText(r.estimate)}</strong>
+                    <small>{r.estimate.basis}</small>
+                  </div>
+                ))}
               <div className="action">
                 <strong>What to do</strong>
                 <p>{r.action}</p>
@@ -183,7 +208,7 @@ export function Report({
               selected.map((c) => (
                 <div className="snapshot" key={c.id}>
                   <h3>
-                    {c.view} view{" "}
+                    {viewLabel(c.view)}{" "}
                     <span>{c.reviewed ? "Reviewed" : "Unreviewed"}</span>
                   </h3>
                   {c.metrics
@@ -196,11 +221,12 @@ export function Report({
                       <div key={m.id}>
                         <span>{m.label}</span>
                         <strong>
-                          {m.value}
+                          {metricValue(m)}
+                          {m.unit === "°" && "°"}
                           {m.spread !== undefined && m.spread > 0 && (
                             <small> ±{m.spread}</small>
-                          )}{" "}
-                          <small>{m.unit}</small>
+                          )}
+                          {m.unit !== "°" && <small> {m.unit}</small>}
                         </strong>
                       </div>
                     ))}

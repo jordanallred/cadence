@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Smartphone, Download, X } from "lucide-react";
-import type { View } from "../../domain/types";
+import { viewLabel, type View } from "../../domain/types";
 
 type Item = {
   id: string;
@@ -8,13 +8,6 @@ type Item = {
   view: View;
   size: number;
   type: string;
-};
-
-const viewName: Record<View, string> = {
-  left: "Left side",
-  right: "Right side",
-  front: "Front",
-  rear: "Rear",
 };
 
 /**
@@ -106,7 +99,9 @@ export function PhoneLink({
         </div>
       ) : (
         <small className="muted">
-          Phone link is unavailable: {link.error || "no local network found"}.
+          {/^phone link/i.test(link.error ?? "")
+            ? link.error!.replace(/\.*$/, ".")
+            : `Phone link is unavailable: ${(link.error || "no local network found").replace(/\.*$/, "")}.`}{" "}
           Copy the video to this computer and choose it above instead.
         </small>
       )}
@@ -115,7 +110,7 @@ export function PhoneLink({
           {items.map((it) => (
             <li key={it.id}>
               <span>
-                <strong>{viewName[it.view]}</strong>
+                <strong>{viewLabel(it.view)}</strong>
                 <small>
                   {it.name} · {(it.size / 1e6).toFixed(1)} MB
                 </small>

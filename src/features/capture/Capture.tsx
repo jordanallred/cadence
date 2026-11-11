@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from "react";
 import { Camera, CheckCircle2, Film, ChevronRight } from "lucide-react";
-import type { ClipAnalysis, View } from "../../domain/types";
+import { viewLabel, type ClipAnalysis, type View } from "../../domain/types";
 import { analyze, findSteadyPedaling } from "../../analysis/run";
 import { beep } from "./beep";
 import { openVideo } from "../../video/sample";
@@ -49,6 +49,8 @@ export function Capture({
     scanAbort = useRef<AbortController | null>(null),
     timer = useRef<ReturnType<typeof setInterval> | null>(null),
     camera = useRef<HTMLVideoElement>(null),
+    preview = useRef<HTMLVideoElement>(null),
+    stopAtEnd = useRef<(() => void) | null>(null),
     recorder = useRef<MediaRecorder | null>(null),
     stream = useRef<MediaStream | null>(null),
     generation = useRef(0);
@@ -236,6 +238,25 @@ export function Capture({
   };
   const busy = progress !== null;
   const scanning = scan !== null;
+  const [previewUrl, setPreviewUrl] = useState("");
+  useEffect(() => {
+    if (!file) return setPreviewUrl("");
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  // The same rule openVideo() enforces, shown before Analyze is pressed.
+  const length = end - start;
+  const trimProblem = !file
+    ? ""
+    : start < 0 || end > duration + 0.05 || length <= 0
+      ? `Times must be between 0 and ${fmt(duration)} s, start before end.`
+      : length < 8
+        ? `That is ${fmt(length)} s. Choose at least 8 seconds.`
+        : length > 30
+          ? `That is ${fmt(length)} s. Choose at most 30 seconds.`
+          : "";
+  const here = () => Math.round((preview.current?.currentTime ?? 0) * 10) / 10;
   return (
     <>
       <div className="section-title">
@@ -258,13 +279,7 @@ export function Capture({
                 className={view === v ? "selected" : ""}
                 onClick={() => setView(v)}
               >
-                {v === "left"
-                  ? "Left side"
-                  : v === "right"
-                    ? "Right side"
-                    : v === "front"
-                      ? "Front"
-                      : "Rear"}
+                {viewLabel(v)}
               </button>
             ))}
           </div>
@@ -368,6 +383,70 @@ export function Capture({
               ) : (
                 trimNote && <p className="trim-note">{trimNote}</p>
               )}
+              {previewUrl && (
+                <div className="trim-preview">
+                  <video
+                    ref={preview}
+                    src={previewUrl}
+                    controls
+                    muted
+                    playsInline
+                    preload="metadata"
+                    aria-label={`Preview of ${file.name}`}
+                    onLoadedMetadata={() => {
+                      if (preview.current) preview.current.currentTime = start;
+                    }}
+                  />
+                  <div className="trim-bar" aria-hidden="true">
+                    <span
+                      style={{
+                        left: `${(Math.max(0, start) / (duration || 1)) * 100}%`,
+                        width: `${(Math.max(0, Math.min(duration, end) - Math.max(0, start)) / (duration || 1)) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="trim-buttons">
+                    <button
+                      className="secondary"
+                      disabled={busy || scanning}
+                      onClick={() => setStart(here())}
+                    >
+                      Start here
+                    </button>
+                    <button
+                      className="secondary"
+                      disabled={busy || scanning}
+                      onClick={() => setEnd(here())}
+                    >
+                      End here
+                    </button>
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        const v = preview.current;
+                        if (!v) return;
+                        if (stopAtEnd.current)
+                          v.removeEventListener(
+                            "timeupdate",
+                            stopAtEnd.current,
+                          );
+                        const stop = () => {
+                          if (v.currentTime >= end) {
+                            v.pause();
+                            v.removeEventListener("timeupdate", stop);
+                          }
+                        };
+                        stopAtEnd.current = stop;
+                        v.currentTime = start;
+                        v.addEventListener("timeupdate", stop);
+                        void v.play();
+                      }}
+                    >
+                      Play selection
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="form-grid trim">
                 <Field label="Start time · seconds">
                   <input
@@ -393,6 +472,11 @@ export function Capture({
                   />
                 </Field>
               </div>
+              {trimProblem && !scanning && (
+                <p className="trim-problem" role="status">
+                  {trimProblem}
+                </p>
+              )}
               <Check
                 label="Keep this video with the fit (optional)"
                 checked={retain}
@@ -425,10 +509,10 @@ export function Capture({
           ) : (
             <button
               className="primary full"
-              disabled={!file || recording || scanning}
+              disabled={!file || recording || scanning || !!trimProblem}
               onClick={() => void run()}
             >
-              Analyze {view} view
+              Analyze {viewLabel(view).toLowerCase()} view
             </button>
           )}
         </section>
@@ -499,7 +583,7 @@ export function Capture({
               <button key={c.id} onClick={() => onReview(c)}>
                 <Film size={20} />
                 <span>
-                  <strong>{c.view} view</strong>
+                  <strong>{viewLabel(c.view)} view</strong>
                   <small>
                     {c.name} · Setup {c.setupRevision + 1}
                   </small>

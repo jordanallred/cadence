@@ -218,7 +218,11 @@ export function measureClip(
     metrics.push({
       id,
       label,
-      value: Math.round(value * 10) / 10,
+      // A ratio near 1 needs two decimals to say anything.
+      value:
+        unit === "ratio"
+          ? Math.round(value * 100) / 100
+          : Math.round(value * 10) / 10,
       unit,
       sampleCount,
       confidence:

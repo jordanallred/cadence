@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, Undo2 } from "lucide-react";
-import type { ClipAnalysis, Point } from "../../domain/types";
+import { ArrowLeft, Check, Trash2, Undo2 } from "lucide-react";
+import {
+  viewLabel,
+  type ClipAnalysis,
+  type Intake,
+  type Point,
+} from "../../domain/types";
+import { targetRange, describeRange } from "../../fit/ranges";
+import { metricValue } from "../metricFormat";
 import { measureClip, joints } from "../../analysis/metrics";
 import { Field, Notice } from "../../components/Fields";
 import { loadVideo } from "../../storage/db";
@@ -22,22 +29,34 @@ const edges = [
   [28, 30],
   [30, 32],
 ];
+/** "leftKnee" → "Left knee". */
+const jointName = (k: string) => {
+  const words = k.replace(/([A-Z])/g, " $1").toLowerCase();
+  return words[0].toUpperCase() + words.slice(1);
+};
 export function ClipReview({
   clip,
+  intake,
   file,
   onUpdate,
   onBack,
+  onRemove,
   onFile,
 }: {
   clip: ClipAnalysis;
+  intake: Intake;
   file?: File;
   onUpdate: (c: ClipAnalysis) => void;
   onBack: () => void;
+  onRemove: () => void;
   onFile: (f: File) => void;
 }) {
   const [source, setSource] = useState(""),
     [index, setIndex] = useState(0),
-    [joint, setJoint] = useState("leftKnee"),
+    [joint, setJoint] = useState(
+      clip.view === "right" ? "rightKnee" : "leftKnee",
+    ),
+    [removing, setRemoving] = useState(false),
     [edit, setEdit] = useState(false),
     [error, setError] = useState("");
   const video = useRef<HTMLVideoElement>(null);
@@ -91,10 +110,7 @@ export function ClipReview({
         <ArrowLeft size={17} /> All recordings
       </button>
       <div className="section-title">
-        <h1>
-          Check the tracking:{" "}
-          <span className="view-name">{clip.view} view</span>
-        </h1>
+        <h1>Check the tracking: {viewLabel(clip.view).toLowerCase()} view</h1>
         <p>
           Follow the joints through the whole clip. A misplaced point changes
           the measurement.
@@ -257,7 +273,7 @@ export function ClipReview({
                 >
                   {Object.keys(joints).map((k) => (
                     <option key={k} value={k}>
-                      {k.replace(/([A-Z])/g, " $1")}
+                      {jointName(k)}
                     </option>
                   ))}
                 </select>
@@ -312,20 +328,48 @@ export function ClipReview({
           >
             <Check size={17} /> I checked the tracking throughout this clip
           </button>
+          <div className="remove-recording">
+            {removing ? (
+              <>
+                <span>
+                  Remove this recording, its measurements and any kept video?
+                </span>
+                <button className="danger-button" onClick={onRemove}>
+                  Remove recording
+                </button>
+                <button
+                  className="secondary"
+                  onClick={() => setRemoving(false)}
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button className="text-button" onClick={() => setRemoving(true)}>
+                <Trash2 size={15} />
+                Remove this recording
+              </button>
+            )}
+          </div>
         </section>
         <aside>
           <section className="panel">
             <h2>Measured movement</h2>
             <div className="metric-list">
-              {clip.metrics.map((m) => (
-                <div key={m.id}>
-                  <span>{m.label}</span>
-                  <strong>
-                    {m.value}
-                    <small>{m.unit}</small>
-                  </strong>
-                </div>
-              ))}
+              {clip.metrics.map((m) => {
+                const range = targetRange(m.id, intake),
+                  where = range && describeRange(m.value, range, m.unit);
+                return (
+                  <div key={m.id} className={where ? where.state : undefined}>
+                    <span>{m.label}</span>
+                    <strong>
+                      {metricValue(m)}
+                      {m.unit === "°" ? "°" : <small>{m.unit}</small>}
+                    </strong>
+                    {where && <p className="metric-target">{where.text}</p>}
+                  </div>
+                );
+              })}
             </div>
             {!clip.metrics.length && <p>No reliable cycle measurements yet.</p>}
           </section>
