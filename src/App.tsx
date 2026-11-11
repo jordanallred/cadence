@@ -24,10 +24,12 @@ import {
   saveSession,
   loadSessions,
   deleteSession,
+  mergeImported,
+  savedWhere,
   saveVideo,
   deleteVideo,
 } from "./storage/db";
-import { parseSession, exportSession } from "./storage/portable";
+import { parseBackup, exportSession, exportAll } from "./storage/portable";
 import { Notice } from "./components/Fields";
 const steps = [
   {
@@ -58,7 +60,7 @@ export default function App() {
         setSessions(list);
         setSession(list[0] ?? newSession());
         loaded.current = true;
-        setSaveState("Saved locally");
+        setSaveState(savedWhere());
       })
       .catch((e) => {
         if (live) {
@@ -97,7 +99,7 @@ export default function App() {
             snapshot,
             ...list.filter((s) => s.id !== snapshot.id),
           ]);
-          setSaveState("Saved locally");
+          setSaveState(savedWhere());
         })
         .catch((e) => {
           setSaveState("Not saved");
@@ -152,9 +154,20 @@ export default function App() {
   const importBackup = async (file?: File) => {
     if (!file) return;
     try {
-      if (file.size > 30_000_000) throw Error("Backup exceeds 30 MB.");
-      const incoming = parseSession(await file.text());
+      const backup = parseBackup(await file.text());
       await persistNow();
+      if (backup.all) {
+        // A full backup restores fits as they were, keeping their ids, so
+        // restoring twice does not duplicate anything.
+        await mergeImported(backup.sessions);
+        const list = await loadSessions();
+        setSessions(list);
+        setSession(list[0] ?? newSession());
+        setError("");
+        go(0);
+        return;
+      }
+      const incoming = backup.sessions[0];
       incoming.id = crypto.randomUUID();
       incoming.clips = incoming.clips.map((c) => ({
         ...c,
@@ -162,6 +175,7 @@ export default function App() {
       }));
       incoming.updatedAt = new Date().toISOString();
       await saveSession(incoming);
+      setSessions((list) => [incoming, ...list]);
       setSession(incoming);
       setError("");
       go(0);
@@ -356,7 +370,24 @@ export default function App() {
                 }
               >
                 <Download size={14} />
-                Backup
+                Back up this fit
+              </button>
+              <button
+                onClick={async () => {
+                  await persistNow().catch(() => undefined);
+                  exportAll(
+                    sessions.some((s) => s.id === session.id)
+                      ? sessions.map((s) =>
+                          s.id === session.id
+                            ? { ...session, recommendations: results }
+                            : s,
+                        )
+                      : [{ ...session, recommendations: results }, ...sessions],
+                  );
+                }}
+              >
+                <Download size={14} />
+                Back up all fits
               </button>
               <label>
                 <Upload size={14} />

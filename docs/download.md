@@ -29,8 +29,12 @@ Cadence on your computer, where it appears with a **Use this video** button.
   the feature off.
 
 Everything stays on your computer. Videos are analyzed in your browser and
-nothing is uploaded. Sessions are saved in that browser, so use the same
-browser each time and export backups.
+nothing is uploaded. Fit history is saved as JSON files on your computer
+(Windows: `%AppData%\Cadence\sessions`, macOS: `~/Library/Application
+Support/Cadence/sessions`, Linux: `~/.config/Cadence/sessions`), so it is
+still there if you switch browsers or ports. Videos stay in the browser you
+used. **Back up all fits** at the bottom of any page saves everything to one
+file, and **Import backup** restores it.
 
 **First-run warnings.** The downloads are not code-signed yet.
 - Windows SmartScreen: choose **More info → Run anyway**.
@@ -39,5 +43,5 @@ browser each time and export backups.
 - Linux: `chmod +x cadence-*` if needed.
 
 Check a download against `SHA256SUMS.txt` on the release page if you want
-to verify it. Options: `--port 5181` (sessions are tied to the port),
+to verify it. Options: `--port 5190`,
 `--no-browser`, `--version`.

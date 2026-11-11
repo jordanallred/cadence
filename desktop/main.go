@@ -86,7 +86,7 @@ func run(port int, openBrowser, phone bool, lanIP string) error {
 			}
 			return nil
 		}
-		return fmt.Errorf("port %d is in use by another program; try --port %d (saved sessions are tied to the port)", port, port+1)
+		return fmt.Errorf("port %d is in use by another program; try --port %d (fit history is kept either way)", port, port+1)
 	}
 	link := &phoneLink{err: "Phone link is turned off (--no-phone)."}
 	if phone {
@@ -113,10 +113,14 @@ func run(port int, openBrowser, phone bool, lanIP string) error {
 			_ = browse(url)
 		}()
 	}
-	return http.Serve(ln, handler(site, modelPath, link, port))
+	st := openStore()
+	if st.dir != "" {
+		fmt.Println("Fit history is saved in", filepath.Join(st.dir, "sessions"))
+	}
+	return http.Serve(ln, handler(site, modelPath, link, st, port))
 }
 
-func handler(site fs.FS, modelPath string, link *phoneLink, port int) http.Handler {
+func handler(site fs.FS, modelPath string, link *phoneLink, st *store, port int) http.Handler {
 	allowedHosts := map[string]bool{
 		fmt.Sprintf("127.0.0.1:%d", port): true,
 		fmt.Sprintf("localhost:%d", port): true,
@@ -134,7 +138,7 @@ func handler(site fs.FS, modelPath string, link *phoneLink, port int) http.Handl
 			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
-		if link.localHandler(w, r) {
+		if link.localHandler(w, r) || st.handle(w, r) {
 			return
 		}
 		switch r.URL.Path {
