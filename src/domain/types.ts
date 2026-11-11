@@ -24,6 +24,14 @@ const intakeFields = z.object({
   saddleSetback: z.number().min(-200).max(400).nullable(),
   saddleTilt: z.number().min(-30).max(30).nullable(),
   crankLength: z.number().min(80).max(250).nullable(),
+  // Added in rules 0.3.0. Older profiles load with these unknown.
+  riderHeight: z.number().min(100).max(230).nullable().default(null),
+  shoulderWidth: z.number().min(250).max(600).nullable().default(null),
+  barReach: z.number().min(300).max(900).nullable().default(null),
+  barDrop: z.number().min(-200).max(300).nullable().default(null),
+  stemLength: z.number().min(20).max(160).nullable().default(null),
+  barWidth: z.number().min(300).max(900).nullable().default(null),
+  cleatOffset: z.number().min(-40).max(60).nullable().default(null),
   cockpit: z.string().max(1000),
   limitations: z.string().max(1500),
   symptom: z.enum([
@@ -143,7 +151,14 @@ export const recommendationSchema = z.object({
   confidence: z.enum(["low", "moderate", "high"]).optional(),
   estimate: z
     .object({
-      setting: z.enum(["saddleHeight", "saddleSetback", "stem", "spacers"]),
+      setting: z.enum([
+        "saddleHeight",
+        "saddleSetback",
+        "stem",
+        "spacers",
+        "barWidth",
+        "cleat",
+      ]),
       direction: z.enum([
         "raise",
         "lower",
@@ -151,6 +166,8 @@ export const recommendationSchema = z.object({
         "back",
         "shorter",
         "longer",
+        "wider",
+        "narrower",
       ]),
       minMm: z.number().nonnegative(),
       maxMm: z.number().nonnegative(),
@@ -165,7 +182,17 @@ export const eventSchema = z.object({
   kind: z.enum(["adjustment", "revert", "retain", "ride"]),
   detail: z.string().max(3000),
   setting: z
-    .enum(["saddleHeight", "saddleSetback", "saddleTilt", "other"])
+    .enum([
+      "saddleHeight",
+      "saddleSetback",
+      "saddleTilt",
+      "barReach",
+      "barDrop",
+      "stemLength",
+      "barWidth",
+      "cleatOffset",
+      "other",
+    ])
     .optional(),
   before: z.number().nullable().optional(),
   after: z.number().nullable().optional(),
@@ -199,6 +226,13 @@ export const defaultIntake: Intake = {
   saddleSetback: null,
   saddleTilt: null,
   crankLength: null,
+  riderHeight: null,
+  shoulderWidth: null,
+  barReach: null,
+  barDrop: null,
+  stemLength: null,
+  barWidth: null,
+  cleatOffset: null,
   cockpit: "",
   limitations: "",
   symptom: "none",

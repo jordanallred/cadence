@@ -5,6 +5,16 @@ import type {
   Recommendation,
 } from "../domain/types";
 import { assessContext, advice } from "./assessment";
+import {
+  reachChange,
+  dropChange,
+  setbackCheck,
+  barWidthTarget,
+  cleatCheck,
+  CLEAT,
+  POPULATION,
+  rangeText,
+} from "./targets";
 /**
  * Dynamic knee flexion at maximum extension. The 30–40° band follows the
  * dynamic convention reported in the "dynamic" source; 25–45° is the outer
@@ -115,6 +125,45 @@ export function recommend(
     reviewed.find((c) => c.view === "rear" || c.view === "front"),
     "pelvic-rock",
   );
+  // 0. Cleat fore-aft. The foot is the base of the fit, so a cleat
+  // experiment comes before the saddle: moving a cleat changes extension.
+  const cleat = cleatCheck(i);
+  const feet = i.symptom === "feet";
+  if (cleat && (cleat.back > 0 || (feet && cleat.current < CLEAT.max - 2))) {
+    const mm =
+      cleat.back > 0 ? cleat.back : Math.min(5, CLEAT.max - cleat.current);
+    const lo = cleat.back > 0 ? mm : Math.min(3, mm);
+    (feet ? out : later).push(
+      advice(
+        "cleat",
+        feet ? "experiment" : "information",
+        "Move your cleats back",
+        cleat.back > 0
+          ? `The pedal axle sits ${-cleat.current} mm ahead of the ball of your foot. Most riders use the ball of the foot or up to ${CLEAT.max} mm behind it.`
+          : `The pedal axle sits ${cleat.current} mm behind the ball of your foot and you report foot discomfort. A slightly more rearward cleat moves load off the forefoot and calf.`,
+        feet || cleat.back > 0
+          ? `Move both cleats ${rangeText({ min: lo, max: mm })} towards the heel, so the axle sits ${rangeText({ min: cleat.current + lo, max: cleat.current + mm })} behind the ball of your foot. Trace around the cleats first, keep the rotation the same, and tighten the bolts to the shoe maker's torque.${feet ? "" : " Optional while you are comfortable."}`
+          : "",
+        {
+          alternatives:
+            "Foot discomfort also comes from shoe size and width, insoles, and how tight the straps are. These studies looked at efficiency and joint angles, not comfort or injury.",
+          prerequisites:
+            "Make sure the cleat bolts have room to move in the shoe's slots.",
+          recheck:
+            "Ride 2–3 times, then re-record the side view: a cleat move changes knee extension slightly, so check saddle height again.",
+          sources: ["cleat-15", "cleat-midfoot"],
+          confidence: "low",
+          estimate: {
+            setting: "cleat",
+            direction: "back",
+            minMm: lo,
+            maxMm: mm,
+            basis: `To ${CLEAT.min}–${CLEAT.max} mm behind the ball of the foot, the range studied without loss of efficiency.`,
+          },
+        },
+      ),
+    );
+  }
   // 1. Saddle height
   if (knee !== undefined) {
     const k = Math.round(knee * 10) / 10;
@@ -249,53 +298,157 @@ export function recommend(
       parts.push(
         `your torso is ${lowTorso}° from horizontal, a low position for ${i.discipline} riding`,
       );
-    const action =
-      reachDir === "longer"
-        ? "Try a stem 10 mm longer, or move the hoods slightly forward. Change one thing only."
-        : lowTorso !== null && reachDir !== "shorter"
-          ? "Raise the handlebar by moving one 5 mm spacer from above the stem to below it. Change one thing only."
-          : "Try a stem 10 mm shorter, or raise the handlebar with one 5 mm spacer. Pick one; change nothing else.";
+    const reach = reachChange(i, side),
+      drop = dropChange(i, side);
+    const needHeight = i.riderHeight
+      ? ""
+      : " Add your height in your profile for a size-specific number.";
+    const stemTo = (step: number) =>
+      i.stemLength ? ` (${i.stemLength} → ${i.stemLength + step} mm)` : "";
+    const reachTo = (step: number) =>
+      i.barReach
+        ? ` Your saddle-to-bar reach would go from ${i.barReach} to about ${i.barReach + step} mm.`
+        : "";
+    let action: string;
+    let estimate: NonNullable<Recommendation["estimate"]>;
+    if (reachDir === "longer") {
+      const step = reach?.stemStep ?? 10;
+      action = reach
+        ? `Try a stem ${step} mm longer${stemTo(step)}.${reachTo(step)} The full change to bring your shoulder angle to ${reach.toDeg}° is about ${rangeText(reach.mm)}; go in 10 mm steps and re-record between them. Change one thing only.`
+        : `Try a stem 10 mm longer${stemTo(10)}, or move the hoods slightly forward. Change one thing only.${needHeight}`;
+      estimate = {
+        setting: "stem",
+        direction: "longer",
+        minMm: reach ? reach.mm.min : 10,
+        maxMm: reach ? reach.mm.max : 10,
+        basis: reach?.basis ?? "Typical stem increment.",
+      };
+    } else if (lowTorso !== null && reachDir !== "shorter") {
+      const first = drop ? Math.min(10, drop.spacers.min) : 5;
+      action = drop
+        ? `Raise the handlebar by moving ${rangeText(drop.spacers)} of spacers from above the stem to below it, ${first} mm at a time. That lifts your torso toward ${drop.toDeg}°.${i.barDrop !== null ? ` Your saddle-to-bar drop would go from ${i.barDrop} to about ${i.barDrop - drop.mm.max}–${i.barDrop - drop.mm.min} mm.` : ""} Change one thing only.`
+        : `Raise the handlebar by moving one 5 mm spacer from above the stem to below it. Change one thing only.${needHeight}`;
+      estimate = {
+        setting: "spacers",
+        direction: "raise",
+        minMm: drop ? drop.spacers.min : 5,
+        maxMm: drop ? drop.spacers.max : 10,
+        basis: drop?.basis ?? "One or two 5 mm spacers.",
+      };
+    } else {
+      const step = reach?.stemStep ?? 10;
+      action = reach
+        ? `Try a stem ${step} mm shorter${stemTo(-step)}.${reachTo(-step)} The full change to bring your arms to ${reach.toDeg === reach.fromDeg ? "a softer elbow" : `a ${reach.toDeg}° shoulder angle`} is about ${rangeText(reach.mm)}; go in 10 mm steps and re-record between them. Or raise the handlebar one 5 mm spacer instead. Pick one; change nothing else.`
+        : `Try a stem 10 mm shorter${stemTo(-10)}, or raise the handlebar with one 5 mm spacer. Pick one; change nothing else.${needHeight}`;
+      estimate = {
+        setting: "stem",
+        direction: "shorter",
+        minMm: reach ? reach.mm.min : 10,
+        maxMm: reach ? reach.mm.max : 10,
+        basis:
+          reach?.basis ??
+          "Typical stem increment, or one or two 5 mm spacers instead.",
+      };
+    }
     const rec = advice(
       "reach",
       upperSymptom || !comfortable ? "experiment" : "no-change",
       reachDir === "longer"
         ? "Your cockpit may be short"
-        : "Your handlebar reach may be long or low",
+        : reachDir
+          ? "Your handlebar reach may be long"
+          : "Your handlebar may be low",
       `From the side view, ${parts.join(" and ")}.${symptomText ? ` This can add load to the ${symptomText}.` : ""}${upperSymptom || !comfortable ? "" : " You report no discomfort, so this is for information."}`,
       upperSymptom || !comfortable
         ? action
         : "No change needed while you are comfortable. If you develop hand, neck or back discomfort, start here.",
       {
         alternatives:
-          "Hand position on the bar, core strength, flexibility and riding posture affect these angles as much as the bike does. These ranges are common fitting practice, not research thresholds.",
+          "Hand position on the bar, core strength, flexibility and riding posture affect these angles as much as the bike does. Your torso also moves when the bar moves, so the full change is an upper estimate. These ranges are common fitting practice, not research thresholds.",
         prerequisites:
           "Check steerer spacer limits and stem torque. Make sure the saddle height is settled first, because it changes your reach.",
         recheck:
           "Ride 2–3 times, then re-record the side view with hands on the hoods.",
-        sources: ["product"],
+        sources: i.riderHeight ? ["product", "anthropometry"] : ["product"],
         confidence: "low",
-        estimate:
-          reachDir === "longer"
-            ? {
-                setting: "stem",
-                direction: "longer",
-                minMm: 10,
-                maxMm: 10,
-                basis: "Typical stem increment.",
-              }
-            : {
-                setting: "spacers",
-                direction: "raise",
-                minMm: 5,
-                maxMm: 10,
-                basis:
-                  "One or two 5 mm spacers, or a stem 10 mm shorter instead.",
-              },
+        estimate,
       },
     );
     (out.some((r) => r.outcome === "experiment") ? later : out).push(rec);
   }
-  // 3. Knee tracking from front/rear
+  // 3. Saddle setback against measured riders
+  const setback = setbackCheck(i);
+  if (setback && setback.move !== 0 && i.saddleHeight) {
+    const back = setback.move > 0,
+      mm = Math.abs(setback.move),
+      first = Math.min(5, mm);
+    const pct = Math.round((setback.current! / i.saddleHeight) * 1000) / 10;
+    const relevant = ["knee", "saddle", "back"].includes(i.symptom);
+    later.push(
+      advice(
+        "setback",
+        relevant ? "experiment" : "information",
+        back
+          ? "Your saddle is further forward than most riders'"
+          : "Your saddle is further back than most riders'",
+        `Your setback is ${setback.current} mm, ${pct}% of your saddle height. Measured road riders with your saddle height mostly sit at ${rangeText(setback.typical)}, and nearly all at ${rangeText(setback.outer)}.`,
+        relevant
+          ? `Move the saddle ${first} mm ${back ? "back" : "forward"} on its rails, toward ${back ? setback.typical.min : setback.typical.max} mm. Moving the saddle ${back ? "back raises" : "forward lowers"} it relative to the pedals by about 3 mm per 10 mm, so re-check saddle height afterwards.`
+          : "No change needed while you are comfortable. This shows how your setup compares; it is not a target.",
+        {
+          alternatives:
+            "This compares you with what trained road riders use, not with what is best for you. Leg length and flexibility did not predict setback in that study. Saddle shape and how you sit on it also change your effective position.",
+          prerequisites:
+            "Stay within the saddle rail markings and seatpost clamp torque. Change one thing at a time.",
+          recheck:
+            "Ride 2–3 times, then re-measure setback and saddle height and re-record the side view.",
+          sources: ["holliday", "kops"],
+          confidence: "low",
+          estimate: {
+            setting: "saddleSetback",
+            direction: back ? "back" : "forward",
+            minMm: first,
+            maxMm: mm,
+            basis: `To the edge of the typical range for your ${i.saddleHeight} mm saddle height (${POPULATION.setback.mean} ± ${POPULATION.setback.sd}%).`,
+          },
+        },
+      ),
+    );
+  }
+  // 4. Handlebar width
+  const bar = barWidthTarget(i);
+  if (bar && bar.off !== 0) {
+    const wider = bar.off > 0;
+    later.push(
+      advice(
+        "bar-width",
+        "equipment-training",
+        wider
+          ? "Your handlebar is wider than your shoulders"
+          : "Your handlebar is narrower than your shoulders",
+        `Your bar is ${bar.current} mm at the hoods and your shoulders are ${i.shoulderWidth} mm across.${upperSymptom ? " Bar width can change load on the hands, neck and upper back." : ""}`,
+        `If you replace the bar, try ${bar.size} mm centre to centre at the hoods. Anything from ${rangeText(bar.typical)} matches your shoulders. A bar you are comfortable on is not worth replacing for this alone.`,
+        {
+          alternatives:
+            "Wider bars give more steering leverage and some riders prefer them off-road; narrower bars are more aerodynamic. The study behind this was small and short.",
+          prerequisites:
+            "Brands measure width differently; check the maker's geometry chart for the hood width before buying.",
+          recheck:
+            "Ride 2–3 times after a change and note hand and neck comfort.",
+          sources: ["bar-width"],
+          confidence: "low",
+          estimate: {
+            setting: "barWidth",
+            direction: wider ? "narrower" : "wider",
+            minMm: Math.abs(bar.off),
+            maxMm: Math.abs(bar.off),
+            basis: `${bar.size} mm from your ${i.shoulderWidth} mm shoulder width; drop bars come in 20 mm steps.`,
+          },
+        },
+      ),
+    );
+  }
+  // 5. Knee tracking from front/rear
   const fr =
     reviewed.find((c) => c.view === "front") ??
     reviewed.find((c) => c.view === "rear");
@@ -321,7 +474,7 @@ export function recommend(
         ),
       );
   }
-  // 4. Missing views
+  // 6. Missing views
   if (!has("front") && !has("rear"))
     later.push(
       advice(

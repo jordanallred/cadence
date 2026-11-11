@@ -384,7 +384,7 @@ export function Capture({
                 </Field>
               </div>
               <Check
-                label="Keep this video in local browser storage (optional)"
+                label="Keep this video with the fit (optional)"
                 checked={retain}
                 onChange={setRetain}
               />

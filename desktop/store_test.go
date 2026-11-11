@@ -55,3 +55,40 @@ func openStoreAt(t *testing.T, dir string) *store {
 	}
 	return s
 }
+
+func TestVideoRoundTrip(t *testing.T) {
+	s := openStoreAt(t, t.TempDir())
+	if w := storeReq(s, http.MethodPut, "/api/store/videos/clip1", "text/plain", "x"); w.Code != 415 {
+		t.Fatalf("text/plain upload should be refused, got %d", w.Code)
+	}
+	if w := storeReq(s, http.MethodPut, "/api/store/videos/..%2fx", "video/mp4", "x"); w.Code != 404 {
+		t.Fatalf("bad id should 404, got %d", w.Code)
+	}
+	if w := storeReq(s, http.MethodPut, "/api/store/videos/clip1", "video/webm", "first"); w.Code != 200 {
+		t.Fatalf("put: %d %s", w.Code, w.Body)
+	}
+	// Replacing with another type leaves one file, not two.
+	if w := storeReq(s, http.MethodPut, "/api/store/videos/clip1", "video/mp4", "0123456789"); w.Code != 200 {
+		t.Fatalf("replace: %d %s", w.Code, w.Body)
+	}
+	var list struct{ Videos []videoEntry }
+	_ = json.Unmarshal(storeReq(s, http.MethodGet, "/api/store/videos", "", "").Body.Bytes(), &list)
+	if len(list.Videos) != 1 || list.Videos[0].Size != 10 {
+		t.Fatalf("list: %+v", list)
+	}
+	w := storeReq(s, http.MethodGet, "/api/store/videos/clip1", "", "")
+	if w.Code != 200 || w.Body.String() != "0123456789" || w.Header().Get("Content-Type") != "video/mp4" {
+		t.Fatalf("get: %d %q %s", w.Code, w.Body, w.Header().Get("Content-Type"))
+	}
+	r := httptest.NewRequest(http.MethodGet, "/api/store/videos/clip1", nil)
+	r.Header.Set("Range", "bytes=2-4")
+	rec := httptest.NewRecorder()
+	s.handle(rec, r)
+	if rec.Code != 206 || rec.Body.String() != "234" {
+		t.Fatalf("range: %d %q", rec.Code, rec.Body)
+	}
+	storeReq(s, http.MethodDelete, "/api/store/videos/clip1", "", "")
+	if w := storeReq(s, http.MethodGet, "/api/store/videos/clip1", "", ""); w.Code != 404 {
+		t.Fatalf("after delete: %d", w.Code)
+	}
+}

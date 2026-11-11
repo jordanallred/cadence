@@ -1,3 +1,4 @@
+import { measurement } from "./measurements";
 import { eventSchema, type Session, type FitEvent } from "../domain/types";
 export function activeExperiment(s: Session): FitEvent | undefined {
   return [...s.events]
@@ -31,13 +32,8 @@ export function appendEvent(s: Session, event: FitEvent): Session {
         !Number.isFinite(e.after)
       )
         throw Error("Enter the measured new setting.");
-      const limits =
-        e.setting === "saddleHeight"
-          ? [1, 1500]
-          : e.setting === "saddleSetback"
-            ? [-200, 400]
-            : [-30, 30];
-      if (e.after < limits[0] || e.after > limits[1])
+      const { min, max } = measurement(e.setting);
+      if (e.after < min || e.after > max)
         throw Error("Setting is outside the supported measurement range.");
       n.intake[e.setting] = e.after;
     }
