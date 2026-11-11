@@ -2482,6 +2482,47 @@ main:focus {
   color: var(--ink);
   text-align: right;
 }
+.share {
+  margin: 8px 0 36px;
+  max-width: 620px;
+}
+.share h2 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+.share > p.muted {
+  font-size: 13px;
+}
+.share > p.muted:first-of-type {
+  margin-bottom: 14px;
+}
+.share-options {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  display: grid;
+  gap: 8px;
+}
+.share-options legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 8px;
+}
+.share-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.share-status:empty {
+  display: none;
+}
+.share-status {
+  margin: 10px 0 0;
+}
+.share-back {
+  margin-top: 12px;
+}
 .reminder {
   margin: 8px 0 0;
   max-width: 520px;
@@ -2576,6 +2617,7 @@ main:focus {
 }
 @media print {
   .reminder,
+  .share,
   .next-step button {
     display: none;
   }
