@@ -40,7 +40,7 @@ jobs:
       # runner image already has what Chromium needs to start, so a mirror
       # outage only warns. A real missing library still fails the e2e step.
       - run: npx playwright install chromium
-      - run: npx playwright install-deps chromium || echo "::warning::Could not install Chromium's OS packages (Ubuntu mirrors unreachable); using the runner's own."
+      - run: timeout -k 10 120 npx playwright install-deps chromium || echo "::warning::Could not install Chromium's OS packages within 2 minutes (Ubuntu mirrors unreachable or hanging); using the runner's own."
       - name: End-to-end test with real pedaling video
         run: npm run e2e
       - name: Package
