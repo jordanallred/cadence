@@ -1,4 +1,4 @@
-# Evidence register — reviewed 2026-11-10
+# Evidence register — reviewed 2026-11-11
 
 The application is an experimental aid. No independent clinical or expert-equivalence validation has been performed.
 
@@ -8,6 +8,13 @@ The application is an experimental aid. No independent clinical or expert-equiva
 | https://www.nhs.uk/symptoms/knee-pain/ | Urgent knee symptom groups; persistent symptoms merit assessment | General guidance. No condition is diagnosed from the user's selection. |
 | https://pubmed.ncbi.nlm.nih.gov/32022807/ | Published abstract distinguishes static, bottom-dead-center and maximum-extension knee measurements | 26 cyclists. Cites 30–40° maximum-extension dynamic convention; this app uses cycle minimum flexion estimates, not crank-position calibration. Not a validated MediaPipe threshold. |
 | https://pubmed.ncbi.nlm.nih.gov/21615188/ | Review suggesting 25–30° static knee flexion with the pedal at bottom dead centre | Conflicting evidence, small samples, mostly less-expert riders. Static and dynamic measurements differ; the app uses the dynamic 30–40° band. |
+| https://pubmed.ncbi.nlm.nih.gov/18063715/ | Wanich et al. 2007: knee pain by location, IT band, foot numbness and Achilles linked to saddle height/setback, cleat position and rotation, stance width | Clinical review; expert synthesis, not trials of each adjustment. |
+| https://pubmed.ncbi.nlm.nih.gov/2011683/ | Mellion 1991: overuse complaints by body area (neck, back, hands, saddle, knee, foot) and fit links | Older clinical review; expert opinion. |
+| https://lida.sport-iat.de/bdr/Record/3037186?lng=en | Asplund & St Pierre 2004: front, back, inside and outside knee pain and the fit faults behind each | Clinical review; limited trial evidence. |
+| https://doi.org/10.53646/jwsm.v3i2.45 | Kotler et al. 2023: hip, lower back, neck, hands, perineum and foot complaints and their fit links (bar height/reach, saddle tilt, crank length, stance) | Narrative review focused on female-identifying cyclists. |
+| https://pubmed.ncbi.nlm.nih.gov/12860549/ | Patterson et al. 2003: hand numbness/weakness on long rides from hand pressure and position | Multi-day tour cohort; no specific bar setting tested. |
+| https://pubmed.ncbi.nlm.nih.gov/12569224/ | Bressel & Larson 2003: saddle design changes pelvic tilt and comfort | Small lab study; supports tilt/shape as levers, not a specific angle. |
+| https://pubmed.ncbi.nlm.nih.gov/37367235/ | 2023 narrative review: saddle tilt, height, bar position and saddle shape change perineal pressure | Small, mostly short studies. |
 | https://pubmed.ncbi.nlm.nih.gov/39285616/ | Published review abstract supports caution about universal positional prescriptions | Limited study quality and population coverage; no blanket crank/cleat/handlebar recommendation. |
 
 Product heuristics: visibility >= .65 in >=80% of frames; at least 3 complete cycles; 30 Hz sampling; >350 ms tracking-gap rejection; cadence period 400–2500 ms and ratio <=1.6; ankle excursion >=2.5% image height. These are engineering defaults, not published clinical cutoffs.
@@ -18,7 +25,9 @@ Reach and drop (product heuristics from common fitting practice, not research th
 
 Measurement method: landmarks are spike-filtered (3-frame median) and lightly averaged; joint-angle extremes use a 5-point least-squares parabola per cycle. On an exact synthetic pedaling model this recovers knee extension with a mean error of 0.25° (previous method: 1.05°). Synthetic accuracy does not establish real-rider accuracy; see docs/validation.md.
 
-Severity >=7, reported restrictions with discomfort, off-bike/persistent symptoms, any worsened ride, or two distinct unhelpful experiments stop automated fitting and prompt assessment. These conservative product policies are not evidence that a disease is present. Urgency is elevated only for the sourced symptom groups.
+Symptoms (rules 0.4.0): riders report any number of areas from a catalogue of 20 (src/fit/symptoms.ts), each with side, severity 1–10 and a warning flag (sharp, sudden, worsening or swollen; for numbness, lasting hours after the ride). Each area maps to bike settings in the direction the clinical reviews above link it to. Conflicts are settled in a fixed order: a video measurement outside its range decides; otherwise the worse symptom wins if it is at least 3 points worse; otherwise the setting is kept. Symptoms can move saddle height within the 30–40° band (at most 5 mm) but never out of it, and setback only within ±2 SD of measured riders. Cleat rotation (1–2°) and stance width (1–4 mm) come from symptoms only, per side. Ranking: measured problems and cleat fore-aft in fitting order, then symptom-driven changes worst-first.
+
+When advice is held: only the emergency and urgent symptom groups stop all fit advice. An area with the warning flag is held back on its own, with a named clinician type and the reason. Severity >=7, restrictions, off-bike or persistent symptoms, an unanswered safety check, or two unhelpful/worse experiments add a referral or fitter note but keep the ranked changes (Jordan, 2026-11-11: always give concrete adjustments from a valid analysis). A change logged as making a ride worse is undone first and not suggested again. These are product policies, not evidence that a disease is present.
 
 The engine cannot measure pressure, forces, tissue tolerance, true 3D joint rotation, structural leg-length differences or medical cause. Front/rear projected excursions are descriptive. A blank or low-quality recording yields no measurement-based prescription. Comfortable riders are not forced to match normative angles.
 

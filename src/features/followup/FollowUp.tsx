@@ -11,6 +11,7 @@ import {
   revisionAfter,
 } from "../../fit/compare";
 import { loggedSettings, measurement } from "../../fit/measurements";
+import { holdOf } from "../../fit/assessment";
 export function FollowUp({
   session,
   onChange,
@@ -35,7 +36,7 @@ export function FollowUp({
     [rideNotes, setRideNotes] = useState(""),
     [error, setError] = useState("");
   const active = activeExperiment(session),
-    hold = results.find((r) => r.outcome === "assessment" || r.id === "screen"),
+    hold = holdOf(results),
     blocked = hold !== undefined,
     experiment = results.find((r) => r.outcome === "experiment");
   const revisions = revisionAfter(session);

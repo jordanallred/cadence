@@ -125,7 +125,18 @@ describe("saddle setback", () => {
     const info = recommend({ ...rider, saddleSetback: 30 }, [clip], []);
     expect(info.find((r) => r.id === "setback")?.outcome).toBe("information");
     const exp = recommend(
-      { ...rider, saddleSetback: 30, symptom: "saddle" },
+      {
+        ...rider,
+        saddleSetback: 30,
+        symptoms: [
+          {
+            area: "knee-front" as const,
+            side: "both" as const,
+            severity: 4,
+            warning: false,
+          },
+        ],
+      },
       [clip],
       [],
     ).find((r) => r.id === "setback")!;
@@ -170,7 +181,19 @@ describe("cleats", () => {
   });
   it("foot symptoms make the cleat the first experiment", () => {
     const r = recommend(
-      { ...rider, cleatOffset: 2, symptom: "feet", mechanicalLimits: true },
+      {
+        ...rider,
+        cleatOffset: 2,
+        symptoms: [
+          {
+            area: "foot-numb" as const,
+            side: "both" as const,
+            severity: 4,
+            warning: false,
+          },
+        ],
+        mechanicalLimits: true,
+      },
       [side([m("knee-min", 20)])],
       [],
     );
@@ -198,7 +221,14 @@ describe("recommendation", () => {
     const r = recommend(
       {
         ...rider,
-        symptom: "hands",
+        symptoms: [
+          {
+            area: "hand-numb" as const,
+            side: "both" as const,
+            severity: 4,
+            warning: false,
+          },
+        ],
         stemLength: 110,
         barReach: 560,
       },
@@ -218,7 +248,18 @@ describe("recommendation", () => {
   });
   it("without height the advice asks for it", () => {
     const r = recommend(
-      { ...rider, riderHeight: null, symptom: "hands" },
+      {
+        ...rider,
+        riderHeight: null,
+        symptoms: [
+          {
+            area: "hand-numb" as const,
+            side: "both" as const,
+            severity: 4,
+            warning: false,
+          },
+        ],
+      },
       [side([m("knee-min", 35), m("shoulder-angle", 106), m("torso", 40)])],
       [],
     ).find((x) => x.id === "reach")!;
@@ -226,12 +267,23 @@ describe("recommendation", () => {
   });
   it("a low torso with neck pain gives a spacer range", () => {
     const r = recommend(
-      { ...rider, symptom: "neck", barDrop: 90 },
+      {
+        ...rider,
+        symptoms: [
+          {
+            area: "neck" as const,
+            side: "both" as const,
+            severity: 4,
+            warning: false,
+          },
+        ],
+        barDrop: 90,
+      },
       [side([m("knee-min", 35), m("shoulder-angle", 85), m("torso", 24)])],
       [],
-    ).find((x) => x.id === "reach")!;
+    ).find((x) => x.id === "drop")!;
     expect(r.estimate?.setting).toBe("spacers");
-    expect(r.action).toMatch(/moving \d+–\d+ mm of spacers/);
+    expect(r.action).toMatch(/Move \d+–\d+ mm of spacers/);
     expect(r.action).toContain("drop would go from 90");
   });
 });
@@ -242,6 +294,7 @@ describe("numbers table", () => {
     expect(rows.map((r) => r.name)).toEqual([
       "Saddle height",
       "Saddle setback",
+      "Saddle tilt",
       "Reach (stem)",
       "Drop (spacers)",
       "Handlebar width",
@@ -251,7 +304,17 @@ describe("numbers table", () => {
   });
   it("shows the saddle change and the resulting height", () => {
     const clip = side([m("knee-min", 20)]);
-    const i = { ...rider, symptom: "knee" as const };
+    const i = {
+      ...rider,
+      symptoms: [
+        {
+          area: "knee-front" as const,
+          side: "both" as const,
+          severity: 4,
+          warning: false,
+        },
+      ],
+    };
     const rows = fitRows(i, recommend(i, [clip], []), clip);
     const saddle = rows[0];
     expect(saddle.tone).toBe("change");

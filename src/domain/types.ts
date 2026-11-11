@@ -22,6 +22,47 @@ export type PoseFrame = z.infer<typeof frameSchema>;
  */
 const measured = (min: number, max: number) =>
   z.number().min(min).max(max).nullable().default(null).catch(null);
+/**
+ * Places riders feel pain or discomfort on the bike, plus two things they
+ * notice rather than feel. The catalogue with wording and fit rules lives in
+ * src/fit/symptoms.ts.
+ */
+export const symptomAreaSchema = z.enum([
+  "knee-front",
+  "knee-back",
+  "knee-inner",
+  "knee-outer",
+  "it-band",
+  "hip-front",
+  "hamstring",
+  "lower-back",
+  "upper-back",
+  "neck",
+  "hand-numb",
+  "wrist",
+  "saddle-numb",
+  "sit-bones",
+  "chafing",
+  "foot-numb",
+  "achilles",
+  "rocking",
+  "sliding",
+  "other",
+]);
+export type SymptomArea = z.infer<typeof symptomAreaSchema>;
+export const symptomSchema = z.object({
+  area: symptomAreaSchema,
+  /** Which side. Areas on the midline are always "both". */
+  side: z.enum(["left", "right", "both"]),
+  /** 1 = barely noticeable, 10 = worst imaginable. */
+  severity: z.number().int().min(1).max(10),
+  /**
+   * Sharp, sudden or worsening pain, swelling, or numbness or weakness that
+   * lasts after the ride. Holds back bike changes for this area.
+   */
+  warning: z.boolean().default(false),
+});
+export type Symptom = z.infer<typeof symptomSchema>;
 const intakeFields = z.object({
   name: z.string().max(120),
   bike: z.string().max(120),
@@ -42,17 +83,7 @@ const intakeFields = z.object({
   cleatOffset: measured(-40, 60),
   cockpit: z.string().max(1000),
   limitations: z.string().max(1500),
-  symptom: z.enum([
-    "none",
-    "knee",
-    "back",
-    "neck",
-    "hands",
-    "saddle",
-    "feet",
-    "other",
-  ]),
-  severity: z.number().min(0).max(10),
+  symptoms: z.array(symptomSchema).max(30).default([]),
   onset: z.string().max(500),
   outsideCycling: z.boolean(),
   trainingChange: z.boolean(),
@@ -76,12 +107,50 @@ const intakeFields = z.object({
  * clear float noise from the old inch conversion.
  */
 export function migrateIntake(raw: unknown): unknown {
-  if (!raw || typeof raw !== "object" || !("units" in raw)) return raw;
-  const { units, ...rest } = raw as Record<string, unknown>;
-  if (units === "imperial")
-    for (const key of ["saddleHeight", "saddleSetback", "crankLength"])
-      if (typeof rest[key] === "number")
-        rest[key] = Math.round((rest[key] as number) * 10) / 10;
+  if (!raw || typeof raw !== "object") return raw;
+  let rest = raw as Record<string, unknown>;
+  if ("units" in rest) {
+    const { units, ...others } = rest;
+    rest = others;
+    if (units === "imperial")
+      for (const key of ["saddleHeight", "saddleSetback", "crankLength"])
+        if (typeof rest[key] === "number")
+          rest[key] = Math.round((rest[key] as number) * 10) / 10;
+  }
+  if ("symptom" in rest || "severity" in rest) rest = migrateSymptom(rest);
+  return rest;
+}
+/**
+ * Profiles before rules 0.4.0 had one broad symptom and one severity. Each
+ * maps to the most common specific area for that region; the rider can
+ * change it in Your starting point.
+ */
+const legacyArea: Record<string, SymptomArea> = {
+  knee: "knee-front",
+  back: "lower-back",
+  neck: "neck",
+  hands: "hand-numb",
+  saddle: "sit-bones",
+  feet: "foot-numb",
+  other: "other",
+};
+function migrateSymptom(raw: Record<string, unknown>) {
+  const { symptom, severity, ...rest } = raw;
+  if (Array.isArray(rest.symptoms)) return rest;
+  const area = typeof symptom === "string" ? legacyArea[symptom] : undefined;
+  const level =
+    typeof severity === "number" ? Math.round(severity) : Number.NaN;
+  rest.symptoms = area
+    ? [
+        {
+          area,
+          side: "both",
+          // A severity outside 0–10 is damaged data and fails validation.
+          severity: Number.isNaN(level) ? 3 : level === 0 ? 3 : level,
+          warning: false,
+        },
+      ]
+    : [];
   return rest;
 }
 export const intakeSchema = z.preprocess(migrateIntake, intakeFields);
@@ -166,6 +235,10 @@ export const recommendationSchema = z.object({
         "spacers",
         "barWidth",
         "cleat",
+        "saddleTilt",
+        "stance",
+        "cleatRotation",
+        "crank",
       ]),
       direction: z.enum([
         "raise",
@@ -176,12 +249,24 @@ export const recommendationSchema = z.object({
         "longer",
         "wider",
         "narrower",
+        "nose-down",
+        "nose-up",
+        "toe-in",
+        "toe-out",
       ]),
+      /** Amount, in `unit`. Named for the original millimetre-only field. */
       minMm: z.number().nonnegative(),
       maxMm: z.number().nonnegative(),
+      unit: z.enum(["mm", "°"]).optional(),
+      /** Left or right only; both sides when absent. */
+      side: z.enum(["left", "right"]).optional(),
       basis: z.string(),
     })
     .optional(),
+  /** Symptom areas this change is meant to help. */
+  targets: z.array(symptomAreaSchema).optional(),
+  /** Milder symptoms that pointed the other way and were outweighed. */
+  against: z.array(symptomAreaSchema).optional(),
 });
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export const eventSchema = z.object({
@@ -243,8 +328,7 @@ export const defaultIntake: Intake = {
   cleatOffset: null,
   cockpit: "",
   limitations: "",
-  symptom: "none",
-  severity: 0,
+  symptoms: [],
   onset: "",
   outsideCycling: false,
   trainingChange: false,

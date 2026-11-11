@@ -39,12 +39,40 @@ export const clips = (knee = 20, extra: Metric[] = []): ClipAnalysis[] => [
 const experiment = (r: ReturnType<typeof recommend>) =>
   r.find((x) => x.outcome === "experiment");
 it("a reviewed side view alone supports a saddle experiment", () => {
-  const r = recommend({ ...intake, symptom: "knee" }, clips().slice(0, 1), []);
+  const r = recommend(
+    {
+      ...intake,
+      symptoms: [
+        {
+          area: "knee-front" as const,
+          side: "both" as const,
+          severity: 4,
+          warning: false,
+        },
+      ],
+    },
+    clips().slice(0, 1),
+    [],
+  );
   expect(experiment(r)?.id).toBe("saddle");
   expect(r.some((x) => x.id === "coverage")).toBe(true);
 });
 it("no side view yields no adjustment", () => {
-  const r = recommend({ ...intake, symptom: "knee" }, clips().slice(1), []);
+  const r = recommend(
+    {
+      ...intake,
+      symptoms: [
+        {
+          area: "knee-front" as const,
+          side: "both" as const,
+          severity: 4,
+          warning: false,
+        },
+      ],
+    },
+    clips().slice(1),
+    [],
+  );
   expect(experiment(r)).toBeUndefined();
 });
 it("urgent symptoms override apparently good clips", () =>
@@ -55,7 +83,17 @@ it("rejected clips cannot support an adjustment", () =>
   expect(
     experiment(
       recommend(
-        { ...intake, symptom: "knee" },
+        {
+          ...intake,
+          symptoms: [
+            {
+              area: "knee-front" as const,
+              side: "both" as const,
+              severity: 4,
+              warning: false,
+            },
+          ],
+        },
         clips().map((c) => ({
           ...c,
           quality: [
@@ -73,15 +111,39 @@ it("comfortable riders near the range are not pushed to change", () => {
 });
 it("an in-range saddle is confirmed rather than changed", () =>
   expect(
-    recommend({ ...intake, symptom: "knee" }, clips(35), []).find(
-      (x) => x.id === "saddle-ok",
-    ),
+    recommend(intake, clips(35), []).find((x) => x.id === "saddle-ok"),
   ).toBeDefined());
+it("an in-range saddle moves at most 5 mm for a matching symptom", () => {
+  const r = recommend(
+    {
+      ...intake,
+      saddleHeight: 740,
+      symptoms: [
+        { area: "knee-front", side: "left", severity: 5, warning: false },
+      ],
+    },
+    clips(36),
+    [],
+  ).find((x) => x.id === "saddle")!;
+  expect(r.estimate).toMatchObject({ direction: "raise" });
+  expect(r.estimate!.maxMm).toBeLessThanOrEqual(5);
+  expect(r.targets).toContain("knee-front");
+});
 it("unreviewed overlay blocks prescriptions", () =>
   expect(
     experiment(
       recommend(
-        { ...intake, symptom: "knee" },
+        {
+          ...intake,
+          symptoms: [
+            {
+              area: "knee-front" as const,
+              side: "both" as const,
+              severity: 4,
+              warning: false,
+            },
+          ],
+        },
         clips().map((c) => ({ ...c, reviewed: false })),
         [],
       ),
@@ -89,20 +151,80 @@ it("unreviewed overlay blocks prescriptions", () =>
   ).toBeUndefined());
 it("a low knee angle means lowering the saddle", () =>
   expect(
-    experiment(recommend({ ...intake, symptom: "knee" }, clips(20), []))?.title,
+    experiment(
+      recommend(
+        {
+          ...intake,
+          symptoms: [
+            {
+              area: "knee-front" as const,
+              side: "both" as const,
+              severity: 4,
+              warning: false,
+            },
+          ],
+        },
+        clips(20),
+        [],
+      ),
+    )?.title,
   ).toMatch(/Lower/));
 it("a high knee angle means raising the saddle", () =>
   expect(
-    experiment(recommend({ ...intake, symptom: "knee" }, clips(50), []))?.title,
+    experiment(
+      recommend(
+        {
+          ...intake,
+          symptoms: [
+            {
+              area: "knee-front" as const,
+              side: "both" as const,
+              severity: 4,
+              warning: false,
+            },
+          ],
+        },
+        clips(50),
+        [],
+      ),
+    )?.title,
   ).toMatch(/Raise/));
-it("millimetres are only given when saddle height is known", () => {
+it("millimetres are sized to the rider when saddle height is known", () => {
   const without = experiment(
-    recommend({ ...intake, symptom: "knee" }, clips(20), []),
+    recommend(
+      {
+        ...intake,
+        symptoms: [
+          {
+            area: "knee-front" as const,
+            side: "both" as const,
+            severity: 4,
+            warning: false,
+          },
+        ],
+      },
+      clips(20),
+      [],
+    ),
   );
-  expect(without?.estimate).toBeUndefined();
+  // Without a saddle height: a fixed first step, and a request for it.
+  expect(without?.estimate).toMatchObject({ minMm: 3, maxMm: 5 });
+  expect(without?.action).toContain("Enter your saddle height");
   const withHeight = experiment(
     recommend(
-      { ...intake, symptom: "knee", saddleHeight: 740, crankLength: 172.5 },
+      {
+        ...intake,
+        symptoms: [
+          {
+            area: "knee-front" as const,
+            side: "both" as const,
+            severity: 4,
+            warning: false,
+          },
+        ],
+        saddleHeight: 740,
+        crankLength: 172.5,
+      },
       clips(20),
       [],
     ),
@@ -119,7 +241,17 @@ it("saddle change estimate matches known leg geometry", () => {
 });
 it("only one experiment is first; others wait", () => {
   const r = recommend(
-    { ...intake, symptom: "hands" },
+    {
+      ...intake,
+      symptoms: [
+        {
+          area: "hand-numb" as const,
+          side: "both" as const,
+          severity: 4,
+          warning: false,
+        },
+      ],
+    },
     clips(20, [m("shoulder-angle", 105), m("elbow", 5)]),
     [],
   );
@@ -130,7 +262,17 @@ it("only one experiment is first; others wait", () => {
 });
 it("long reach with hand symptoms suggests a shorter or higher cockpit", () => {
   const r = recommend(
-    { ...intake, symptom: "hands" },
+    {
+      ...intake,
+      symptoms: [
+        {
+          area: "hand-numb" as const,
+          side: "both" as const,
+          severity: 4,
+          warning: false,
+        },
+      ],
+    },
     clips(35, [m("shoulder-angle", 105)]),
     [],
   );
@@ -138,7 +280,17 @@ it("long reach with hand symptoms suggests a shorter or higher cockpit", () => {
 });
 it("side views that disagree block changes", () => {
   const r = recommend(
-    { ...intake, symptom: "knee" },
+    {
+      ...intake,
+      symptoms: [
+        {
+          area: "knee-front" as const,
+          side: "both" as const,
+          severity: 4,
+          warning: false,
+        },
+      ],
+    },
     [...clips(20), clip("right", [m("knee-min", 32)])],
     [],
   );

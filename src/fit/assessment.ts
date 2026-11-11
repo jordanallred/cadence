@@ -1,5 +1,12 @@
 import type { Intake, FitEvent, Recommendation } from "../domain/types";
 import { RULE_VERSION } from "./evidence";
+import { AREAS, symptomName } from "./symptoms";
+/**
+ * The one thing that stops fit advice: an emergency or urgent red flag.
+ * Everything else adds a note and keeps the advice.
+ */
+export const holdOf = (results: Recommendation[]) =>
+  results.find((r) => r.urgency !== "routine");
 export function advice(
   id: string,
   outcome: Recommendation["outcome"],
@@ -49,16 +56,69 @@ export function assessContext(i: Intake, e: FitEvent[]): Recommendation[] {
         },
       ),
     ];
-  if (i.screen === "unknown")
-    return [
+  const r: Recommendation[] = [];
+  const symptoms = i.symptoms.filter((x) => !AREAS[x.area].sign);
+  // Unanswered: ask, but do not withhold the fit. The emergency groups are
+  // things a rider would notice and act on; the rest of the advice is a
+  // small, reversible bike change.
+  if (i.screen === "unknown" && symptoms.length)
+    r.push(
       advice(
-        "screen",
+        "screen-check",
         "information",
-        "Complete the symptom check first",
-        "Important context is still unknown.",
-        "Return to Your starting point and answer the symptom check. A negative check does not establish medical clearance.",
+        "Answer the safety check",
+        "You reported discomfort but have not answered the safety check in Your starting point.",
+        "Open Your starting point and answer it. If any of its emergency or urgent signs apply, stop and get medical help before changing your bike.",
+        { sources: ["nhs-back", "nhs-knee"] },
       ),
-    ];
+    );
+  // An area with warning signs is held back on its own; everything else
+  // keeps its advice.
+  for (const s of i.symptoms.filter((x) => x.warning)) {
+    const a = AREAS[s.area];
+    r.push(
+      advice(
+        `hold-${s.area}-${s.side}`,
+        "assessment",
+        `Get your ${symptomName(s)} checked first`,
+        a.numb
+          ? "You said the numbness or weakness lasts after you get off the bike."
+          : "You said the pain is sharp, came on suddenly, is getting worse, or comes with swelling.",
+        `See ${a.clinician} before changing the bike for this. Bike changes for it are held back here because they can mask ${a.numb ? "a trapped nerve" : "an injury"} that needs treatment. The other changes below do not depend on it and are fine to try if riding does not make it worse.`,
+        { sources: a.sources, targets: [s.area] },
+      ),
+    );
+  }
+  if (
+    symptoms.length &&
+    (i.outsideCycling ||
+      i.persistent ||
+      symptoms.some((s) => s.severity >= 7) ||
+      i.limitations.trim())
+  )
+    r.push(
+      advice(
+        "context",
+        "assessment",
+        "Also have a clinician look at it",
+        [
+          i.outsideCycling && "Your symptoms also happen off the bike.",
+          i.persistent && "They have lasted weeks or affect daily life.",
+          symptoms.some((s) => s.severity >= 7) &&
+            "At least one is 7/10 or worse.",
+          i.limitations.trim() && "You noted a limitation or restriction.",
+        ]
+          .filter(Boolean)
+          .join(" "),
+        `Position is often part of the cause, so the changes below are still worth trying one at a time. Book a physiotherapist or sports doctor alongside them, because the cause may not be the bike alone.${i.limitations.trim() ? " Skip any change that conflicts with a clinician's restriction." : ""}`,
+        { sources: ["product", "nhs-knee", "nhs-back"] },
+      ),
+    );
+  const worse = new Set(
+    e
+      .filter((x) => x.kind === "ride" && x.response === "worse")
+      .map((x) => x.experimentId ?? x.id),
+  );
   const failed = new Set(
     e
       .filter(
@@ -66,46 +126,18 @@ export function assessContext(i: Intake, e: FitEvent[]): Recommendation[] {
       )
       .map((x) => x.experimentId),
   );
-  if (
-    e.some((x) => x.kind === "ride" && x.response === "worse") ||
-    failed.size >= 2
-  )
-    return [
+  if (worse.size >= 2 || failed.size >= 2)
+    r.push(
       advice(
         "reassess",
         "assessment",
-        "Pause adjustments and reassess",
-        "Your follow-up shows worsening symptoms or multiple unhelpful experiments.",
-        "Discuss the symptoms and your adjustment history with a qualified clinician or fitter. Further blind changes may not address the cause.",
+        "Consider a professional fitter",
+        worse.size >= 2
+          ? "Two changes have made riding worse."
+          : "Two changes have not helped.",
+        "The next changes below avoid the ones that did not work. If they do not help either, a fitter or physiotherapist who can watch you ride will find causes a video cannot.",
       ),
-    ];
-  if (
-    i.symptom !== "none" &&
-    (i.outsideCycling ||
-      i.persistent ||
-      i.severity >= 7 ||
-      i.limitations.trim())
-  )
-    return [
-      advice(
-        "context",
-        "assessment",
-        "Your symptoms need a broader assessment",
-        "Persistent, severe, off-bike symptoms or a reported limitation may have causes beyond position.",
-        "Discuss your symptoms or restrictions with a qualified clinician before starting fit experiments.",
-        {
-          sources: [
-            "product",
-            ...(i.symptom === "knee"
-              ? ["nhs-knee"]
-              : i.symptom === "back"
-                ? ["nhs-back"]
-                : []),
-          ],
-        },
-      ),
-    ];
-  const r: Recommendation[] = [];
+    );
   if (i.trainingChange)
     r.push(
       advice(

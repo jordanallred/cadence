@@ -10,7 +10,9 @@ it("rejects an incompatible schema", () =>
   expect(() => parseSession('{"schemaVersion":9}')).toThrow());
 it("rejects invalid values instead of creating an empty fit", () => {
   const s = newSession();
-  s.intake.severity = 99;
+  (s.intake as unknown as { symptoms: unknown[] }).symptoms = [
+    { area: "neck", side: "both", severity: 99, warning: false },
+  ];
   expect(() => parseSession(JSON.stringify(s))).toThrow();
 });
 it("migrates an imperial profile to metric without changing its values", () => {

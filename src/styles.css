@@ -1953,3 +1953,221 @@ label:focus-within {
 .camera-row button {
   white-space: nowrap;
 }
+
+/* Symptom picker */
+.symptom-picker fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.symptom-picker legend {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0;
+  margin-bottom: 16px;
+}
+.symptom-picker legend small {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.symptom-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 28px;
+}
+.symptom-group h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.symptom-group .check {
+  padding: 4px 0;
+}
+.symptom-rows {
+  margin: 24px 0 26px;
+  border-top: 1px solid var(--line);
+}
+.symptom-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) 170px minmax(150px, 1fr);
+  grid-template-areas:
+    "name side severity"
+    "name warning warning"
+    "name add add";
+  gap: 8px 22px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.symptom-row-name {
+  grid-area: name;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.symptom-row-name strong {
+  font-weight: 600;
+  line-height: 1.45;
+}
+.symptom-row-name .text-button {
+  padding: 2px 0;
+  min-height: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.symptom-row .segmented {
+  grid-area: side;
+}
+.symptom-row .severity {
+  grid-area: severity;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.symptom-row .severity strong {
+  font-variant-numeric: tabular-nums;
+}
+.symptom-row .warning-check {
+  grid-area: warning;
+}
+.symptom-row .add-side {
+  grid-area: add;
+  padding: 0;
+  min-height: 0;
+}
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.segmented label {
+  position: relative;
+}
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.segmented span {
+  display: block;
+  padding: 7px 12px;
+  font-size: 13px;
+  border-left: 1px solid var(--line);
+  color: #4f6359;
+}
+.segmented label:first-child span {
+  border-left: 0;
+}
+.segmented input:checked + span {
+  background: var(--green);
+  color: #fff;
+}
+.segmented input:focus-visible + span {
+  outline: 2px solid var(--green);
+  outline-offset: -4px;
+}
+.segmented input:disabled + span {
+  color: #b4bfb6;
+}
+@media (max-width: 760px) {
+  .symptom-groups {
+    grid-template-columns: 1fr 1fr;
+  }
+  .symptom-row {
+    grid-template-columns: 1fr;
+    grid-template-areas: "name" "side" "severity" "warning" "add";
+  }
+}
+@media (max-width: 480px) {
+  .symptom-groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* For each symptom */
+.symptom-plan {
+  margin: 0 0 40px;
+}
+.symptom-plan h2 {
+  margin-bottom: 4px;
+}
+.symptom-plan > p {
+  font-size: 12px;
+  margin-bottom: 14px;
+}
+.symptom-plan > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.symptom-plan > ul > li {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) 2.2fr;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.symptom-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.symptom-name strong {
+  font-weight: 600;
+}
+.symptom-name span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.symptom-body p {
+  margin: 0 0 8px;
+  line-height: 1.6;
+  color: #4f6359;
+}
+.symptom-body ol {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.symptom-body ol li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  font-weight: 600;
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+.symptom-body .step {
+  flex: 0 0 20px;
+  text-align: right;
+  font-weight: 500;
+  color: var(--muted);
+}
+.symptom-body .step.none::before {
+  content: "–";
+}
+.symptom-body .symptom-also {
+  font-size: 12px;
+  color: var(--muted);
+}
+.symptom-held {
+  color: #7a4b1c;
+}
+@media (max-width: 760px) {
+  .symptom-plan > ul > li {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}

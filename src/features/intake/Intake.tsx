@@ -1,6 +1,7 @@
 import type { Intake as Profile } from "../../domain/types";
 import { Field, Check } from "../../components/Fields";
 import { SetupMeasurements } from "./SetupMeasurements";
+import { SymptomPicker } from "./SymptomPicker";
 export function Intake({
   value,
   onChange,
@@ -81,42 +82,11 @@ export function Intake({
         <div className="panel-heading">
           <h2>Comfort & context</h2>
         </div>
+        <SymptomPicker
+          value={value.symptoms}
+          onChange={(v) => set("symptoms", v)}
+        />
         <div className="form-grid">
-          <Field label="Main area of discomfort">
-            <select
-              value={value.symptom}
-              onChange={(e) =>
-                set("symptom", e.target.value as Profile["symptom"])
-              }
-            >
-              {[
-                ["none", "No discomfort"],
-                ["knee", "Knee"],
-                ["back", "Back"],
-                ["neck", "Neck / shoulders"],
-                ["hands", "Hands"],
-                ["saddle", "Saddle contact"],
-                ["feet", "Feet"],
-                ["other", "Other"],
-              ].map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field
-            label={`Discomfort · ${value.severity} / 10`}
-            hint="0 = none, 10 = worst imaginable"
-          >
-            <input
-              type="range"
-              min="0"
-              max="10"
-              value={value.severity}
-              onChange={(e) => set("severity", +e.target.value)}
-            />
-          </Field>
           <Field
             label="When does it start?"
             hint="Time into a ride, recent onset, or a specific position."
@@ -159,7 +129,10 @@ export function Intake({
             onChange={(v) => set("equipmentIssue", v)}
           />
         </div>
-        <details className="screen" open={value.screen === "unknown"}>
+        <details
+          className="screen"
+          open={value.screen === "unknown" && value.symptoms.length > 0}
+        >
           <summary>
             Symptom check{" "}
             <span>
@@ -168,7 +141,7 @@ export function Intake({
           </summary>
           <p>
             This is a limited check, not medical clearance. Select the most
-            urgent applicable group.
+            urgent applicable group. Only these groups stop the fit advice.
           </p>
           <ul>
             <li>
