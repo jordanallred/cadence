@@ -38,6 +38,12 @@ import {
   exportAllWithVideos,
 } from "./storage/portable";
 import { Notice } from "./components/Fields";
+import {
+  RELOAD_TO_UPDATE,
+  UPDATED_EVENT,
+  rememberVersion,
+  updatedSinceLoad,
+} from "./storage/version";
 const SAVE_FAILED = "Could not save locally.";
 const DISK_FAILED = "Saved in this browser, but not in the fit folder on disk.";
 const steps = [
@@ -57,10 +63,27 @@ export default function App() {
     [review, setReview] = useState<string | null>(null),
     [error, setError] = useState(""),
     [saveState, setSaveState] = useState("Loading…"),
-    [deletePending, setDeletePending] = useState(false);
+    [deletePending, setDeletePending] = useState(false),
+    [outdated, setOutdated] = useState(false);
   const files = useRef(new Map<string, File>()),
     saveChain = useRef(Promise.resolve()),
     loaded = useRef(false);
+  // A newer Cadence may have replaced the one that served this page.
+  useEffect(() => {
+    void rememberVersion();
+    const stale = () => setOutdated(true);
+    const check = () => {
+      if (document.visibilityState === "visible") void updatedSinceLoad();
+    };
+    window.addEventListener(UPDATED_EVENT, stale);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      window.removeEventListener(UPDATED_EVENT, stale);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, []);
   useEffect(() => {
     let live = true;
     void loadSessions()
@@ -295,6 +318,22 @@ export default function App() {
       </aside>
       <div className="main-shell">
         <main>
+          {outdated && (
+            <div role="alert">
+              <Notice tone="warning">
+                <span>{RELOAD_TO_UPDATE}</span>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    // Let the last edit finish saving first.
+                    void saveChain.current.finally(() => location.reload())
+                  }
+                >
+                  Reload
+                </button>
+              </Notice>
+            </div>
+          )}
           {error && (
             <div role="alert">
               <Notice tone="warning">

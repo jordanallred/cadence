@@ -5,6 +5,7 @@ import { analyze, findSteadyPedaling } from "../../analysis/run";
 import { beep } from "./beep";
 import { openVideo } from "../../video/sample";
 import { Field, Check, Notice } from "../../components/Fields";
+import { RELOAD_TO_UPDATE, updatedSinceLoad } from "../../storage/version";
 import { PhoneLink } from "./PhoneLink";
 const VIEW_HINTS: Record<View, string> = {
   left: "Camera square to the bike, 2–3 m away, lens level with the bottom bracket. Shows saddle height, reach and posture.",
@@ -79,6 +80,10 @@ export function Capture({
       setStart(0);
       setEnd(Math.min(20, d));
       if (d < 8) return;
+      if (await updatedSinceLoad()) {
+        if (gen === generation.current) setTrimNote(RELOAD_TO_UPDATE);
+        return;
+      }
       // Find the steady pedaling so getting on and off the bike is trimmed.
       const controller = new AbortController();
       scanAbort.current = controller;
@@ -117,6 +122,11 @@ export function Capture({
   const run = async () => {
     if (!file) return;
     setError("");
+    // An old page would analyze with old code, bugs included.
+    if (await updatedSinceLoad()) {
+      setError(RELOAD_TO_UPDATE + " Analysis waits until then.");
+      return;
+    }
     setProgress(0);
     abort.current = new AbortController();
     try {
