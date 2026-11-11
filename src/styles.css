@@ -2339,3 +2339,20 @@ main:focus {
   word-break: break-all;
   color: var(--ink);
 }
+/* Three status cells do not fit side by side on the narrowest phones. */
+@media (max-width: 420px) {
+  .coverage-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .coverage-strip > div {
+    flex-wrap: nowrap;
+    padding: 10px 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .coverage-strip span {
+    width: auto;
+    padding-left: 0;
+    margin-left: auto;
+  }
+}

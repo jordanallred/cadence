@@ -249,14 +249,20 @@ export function Capture({
   const length = end - start;
   const trimProblem = !file
     ? ""
-    : start < 0 || end > duration + 0.05 || length <= 0
+    : start < 0 || end > duration || length <= 0
       ? `Times must be between 0 and ${fmt(duration)} s, start before end.`
       : length < 8
         ? `That is ${fmt(length)} s. Choose at least 8 seconds.`
         : length > 30
           ? `That is ${fmt(length)} s. Choose at most 30 seconds.`
           : "";
-  const here = () => Math.round((preview.current?.currentTime ?? 0) * 10) / 10;
+  // Rounded down to 0.1 s so the end of a 14.958 s video is 14.9, never
+  // past the end, which analysis would reject.
+  const here = () =>
+    Math.min(
+      duration,
+      Math.floor((preview.current?.currentTime ?? 0) * 10) / 10,
+    );
   return (
     <>
       <div className="section-title">
