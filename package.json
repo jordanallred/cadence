@@ -12,7 +12,8 @@
     "validate": "node scripts/validate.mjs",
     "check": "tsc -b && vitest run",
     "prepare:wasm": "node scripts/prepare-wasm.mjs",
-    "build:desktop": "node scripts/build-desktop.mjs"
+    "build:desktop": "node scripts/build-desktop.mjs",
+    "e2e": "node tests/e2e/real-video.mjs"
   },
   "dependencies": {
     "@fontsource/dm-sans": "5.3.0",
@@ -32,6 +33,7 @@
     "prettier": "3.9.10",
     "typescript": "5.9.3",
     "vite": "8.3.7",
-    "vitest": "5.1.0"
+    "vitest": "5.1.0",
+    "playwright": "1.63.0"
   }
 }
