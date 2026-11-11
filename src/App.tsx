@@ -356,6 +356,7 @@ export default function App() {
               results={results}
               onChange={update}
               onRecord={() => go(1)}
+              onReport={() => go(2)}
             />
           )}
           <footer className="workspace-footer no-print">
