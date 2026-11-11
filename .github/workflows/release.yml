@@ -35,7 +35,12 @@ jobs:
         env:
           CADENCE_VERSION: ${{ inputs.tag || github.ref_name }}
         run: npm run build:desktop -- --all
-      - run: npx playwright install --with-deps chromium
+      # The browser comes from Playwright's CDN. Its OS packages come from
+      # Ubuntu's mirrors, which are sometimes unreachable from runners; the
+      # runner image already has what Chromium needs to start, so a mirror
+      # outage only warns. A real missing library still fails the e2e step.
+      - run: npx playwright install chromium
+      - run: npx playwright install-deps chromium || echo "::warning::Could not install Chromium's OS packages (Ubuntu mirrors unreachable); using the runner's own."
       - name: End-to-end test with real pedaling video
         run: npm run e2e
       - name: Package
