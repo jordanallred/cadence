@@ -1,5 +1,6 @@
 import type { Intake, FitEvent, Recommendation } from "../domain/types";
 import { RULE_VERSION } from "./evidence";
+import { symptoms, symptomGroup } from "./symptoms";
 export function advice(
   id: string,
   outcome: Recommendation["outcome"],
@@ -66,46 +67,36 @@ export function assessContext(i: Intake, e: FitEvent[]): Recommendation[] {
       )
       .map((x) => x.experimentId),
   );
-  if (
-    e.some((x) => x.kind === "ride" && x.response === "worse") ||
-    failed.size >= 2
-  )
-    return [
-      advice(
+  const r: Recommendation[] = [];
+  if (e.some((x) => x.kind === "ride" && x.response === "worse") || failed.size >= 2)
+    r.push(advice(
         "reassess",
         "assessment",
         "Pause adjustments and reassess",
         "Your follow-up shows worsening symptoms or multiple unhelpful experiments.",
-        "Discuss the symptoms and your adjustment history with a qualified clinician or fitter. Further blind changes may not address the cause.",
-      ),
-    ];
-  if (
-    i.symptom !== "none" &&
-    (i.outsideCycling ||
-      i.persistent ||
-      i.severity >= 7 ||
-      i.limitations.trim())
-  )
-    return [
-      advice(
+        "Discuss the symptoms and your adjustment history with a qualified clinician or fitter. Use any video findings as context, and avoid repeating a change that made symptoms worse.",
+      ));
+  const complaints = symptoms(i);
+  if (complaints.length && (i.outsideCycling || i.persistent || complaints.some(s => s.severity >= 7) || i.limitations.trim()))
+    r.push(advice(
         "context",
         "assessment",
         "Your symptoms need a broader assessment",
         "Persistent, severe, off-bike symptoms or a reported limitation may have causes beyond position.",
-        "Discuss your symptoms or restrictions with a qualified clinician before starting fit experiments.",
+        "Discuss your symptoms or restrictions with a qualified clinician. Review measured fit findings alongside that advice.",
         {
           sources: [
             "product",
-            ...(i.symptom === "knee"
+            ...(complaints.some(s => symptomGroup(s.area) === "knee")
               ? ["nhs-knee"]
-              : i.symptom === "back"
+              : complaints.some(s => symptomGroup(s.area) === "back")
                 ? ["nhs-back"]
                 : []),
           ],
         },
-      ),
-    ];
-  const r: Recommendation[] = [];
+      ));
+  for (const s of complaints.filter(s => s.sharpSuddenWorsening))
+    r.push(advice(`caution-${s.area}-${s.side}`, "assessment", "Check this symptom before changing its fit setting", `${s.side} ${s.area.replaceAll("-", " ")} is sharp, sudden or worsening.`, "Seek appropriate clinical advice for this area; other measured findings remain in the report."));
   if (i.trainingChange)
     r.push(
       advice(

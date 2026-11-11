@@ -22,6 +22,27 @@ export type PoseFrame = z.infer<typeof frameSchema>;
  */
 const measured = (min: number, max: number) =>
   z.number().min(min).max(max).nullable().default(null).catch(null);
+export const symptomAreas = [
+  ["front-knee", "Front of knee"], ["back-knee", "Back of knee"],
+  ["inner-knee", "Inner knee"], ["outer-knee", "Outer knee / IT band"],
+  ["hip", "Hip / groin"], ["lower-back", "Lower back"],
+  ["upper-back", "Upper back"], ["neck", "Neck"],
+  ["shoulder", "Shoulder"], ["hands-numb", "Numb or tingling hands"],
+  ["hands-pain", "Hand / palm pain"], ["wrist", "Wrist"],
+  ["saddle-numb", "Saddle numbness"], ["sit-bones", "Sit bones"],
+  ["chafing", "Chafing"], ["hot-foot", "Hot foot / forefoot"],
+  ["achilles", "Achilles / calf"], ["hamstring", "Hamstring"],
+  ["rocking", "Rocking hips"], ["sliding", "Sliding forward"],
+  ["other", "Other"],
+] as const;
+export const symptomEntrySchema = z.object({
+  area: z.enum(symptomAreas.map(([id]) => id)),
+  side: z.enum(["left", "right", "both", "center"]),
+  severity: z.number().int().min(0).max(10),
+  onset: z.string().max(500),
+  sharpSuddenWorsening: z.boolean(),
+});
+export type SymptomEntry = z.infer<typeof symptomEntrySchema>;
 const intakeFields = z.object({
   name: z.string().max(120),
   bike: z.string().max(120),
@@ -52,6 +73,7 @@ const intakeFields = z.object({
     "feet",
     "other",
   ]),
+  symptoms: z.array(symptomEntrySchema).max(12).default([]),
   severity: z.number().min(0).max(10),
   onset: z.string().max(500),
   outsideCycling: z.boolean(),
@@ -76,8 +98,12 @@ const intakeFields = z.object({
  * clear float noise from the old inch conversion.
  */
 export function migrateIntake(raw: unknown): unknown {
-  if (!raw || typeof raw !== "object" || !("units" in raw)) return raw;
+  if (!raw || typeof raw !== "object") return raw;
   const { units, ...rest } = raw as Record<string, unknown>;
+  if (!Array.isArray(rest.symptoms) && rest.symptom && rest.symptom !== "none") {
+    const area = ({ knee: "front-knee", back: "lower-back", neck: "neck", hands: "hands-pain", saddle: "sit-bones", feet: "hot-foot", other: "other" } as Record<string, string>)[String(rest.symptom)] ?? "other";
+    rest.symptoms = [{ area, side: "both", severity: rest.severity ?? 0, onset: rest.onset ?? "", sharpSuddenWorsening: false }];
+  }
   if (units === "imperial")
     for (const key of ["saddleHeight", "saddleSetback", "crankLength"])
       if (typeof rest[key] === "number")
@@ -244,6 +270,7 @@ export const defaultIntake: Intake = {
   cockpit: "",
   limitations: "",
   symptom: "none",
+  symptoms: [],
   severity: 0,
   onset: "",
   outsideCycling: false,

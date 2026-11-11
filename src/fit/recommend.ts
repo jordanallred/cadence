@@ -5,6 +5,7 @@ import type {
   Recommendation,
 } from "../domain/types";
 import { assessContext, advice } from "./assessment";
+import { symptoms, symptomGroup } from "./symptoms";
 import {
   reachChange,
   dropChange,
@@ -66,8 +67,11 @@ export function recommend(
   events: FitEvent[],
 ): Recommendation[] {
   const context = assessContext(i, events);
-  if (context.some((r) => r.outcome === "assessment" || r.id === "screen"))
+  if (context.some((r) => r.urgency !== "routine"))
     return context;
+  const complaints = symptoms(i);
+  const groups = new Set<string>(complaints.map(s => symptomGroup(s.area)));
+  const top = [...complaints].sort((a,b) => b.severity - a.severity)[0];
   const usable = clips.filter(
     (c) => !c.quality.some((q) => q.severity === "reject") && c.metrics.length,
   );
@@ -120,7 +124,7 @@ export function recommend(
     : undefined;
   const kneeMetric = metric(side, "knee-min");
   const lowConfidence = kneeMetric?.confidence === "low";
-  const comfortable = i.symptom === "none";
+  const comfortable = !complaints.length;
   const pelvic = metric(
     reviewed.find((c) => c.view === "rear" || c.view === "front"),
     "pelvic-rock",
@@ -128,7 +132,7 @@ export function recommend(
   // 0. Cleat fore-aft. The foot is the base of the fit, so a cleat
   // experiment comes before the saddle: moving a cleat changes extension.
   const cleat = cleatCheck(i);
-  const feet = i.symptom === "feet";
+  const feet = groups.has("feet");
   if (cleat && (cleat.back > 0 || (feet && cleat.current < CLEAT.max - 2))) {
     const mm =
       cleat.back > 0 ? cleat.back : Math.min(5, CLEAT.max - cleat.current);
@@ -232,6 +236,8 @@ export function recommend(
           hi > 10
             ? `about ${lo}–${hi} mm in total. Start with 5 mm, ride, then re-record before going further`
             : `about ${lo}–${hi} mm`;
+      } else {
+        estimate = { setting: "saddleHeight", direction: lower ? "lower" : "raise", minMm: 3, maxMm: 5, basis: "Conservative first adjustment without a recorded saddle height; remeasure the knee angle before any further change." };
       }
       const suffix = comfortable
         ? " This is optional while you are comfortable."
@@ -242,7 +248,7 @@ export function recommend(
           "experiment",
           lower ? "Lower your saddle" : "Raise your saddle",
           `Your knee bends ${k}° at full extension. The typical range for dynamic video measurement is 30–40°.${corroboration.length ? " " + corroboration.join(" ") : ""}${suffix}`,
-          `${lower ? "Lower" : "Raise"} the saddle by ${amount}. Mark the seatpost first, keep the saddle angle and setback the same, and change nothing else.${i.saddleHeight ? "" : " Enter your saddle height in your profile to get a millimetre estimate."}`,
+          `${lower ? "Lower" : "Raise"} the saddle by ${amount}. Mark the seatpost first, keep the saddle angle and setback the same, and change nothing else.${i.saddleHeight ? "" : " Enter your saddle height in your profile for a model-based total range."}`,
           {
             alternatives:
               "Camera angle, landmark placement, ankle style, shoe or cleat stack, and training load can all affect this. The range comes from research on trained riders and is a guide, not a rule.",
@@ -263,7 +269,7 @@ export function recommend(
   const elbow = metric(side, "elbow"),
     shoulder = metric(side, "shoulder-angle"),
     torso = metric(side, "torso");
-  const upperSymptom = ["hands", "neck", "back"].includes(i.symptom);
+  const upperSymptom = ["hands", "neck", "back"].some(g => groups.has(g));
   const reachSigns: string[] = [];
   let reachDir: "shorter" | "longer" | undefined;
   if (shoulder && shoulder.value > UPPER.shoulderLong) {
@@ -286,11 +292,11 @@ export function recommend(
     torso && torso.value < UPPER.torsoMin[i.discipline] ? torso.value : null;
   if (reachDir || (lowTorso !== null && upperSymptom)) {
     const symptomText =
-      i.symptom === "hands"
+      groups.has("hands")
         ? "hand"
-        : i.symptom === "neck"
+        : groups.has("neck")
           ? "neck"
-          : i.symptom === "back"
+          : groups.has("back")
             ? "back"
             : "";
     const parts = [...reachSigns];
@@ -383,7 +389,7 @@ export function recommend(
       mm = Math.abs(setback.move),
       first = Math.min(5, mm);
     const pct = Math.round((setback.current! / i.saddleHeight) * 1000) / 10;
-    const relevant = ["knee", "saddle", "back"].includes(i.symptom);
+    const relevant = ["knee", "saddle", "back"].some(g => groups.has(g));
     later.push(
       advice(
         "setback",
@@ -495,7 +501,13 @@ export function recommend(
         "Open each recording and check the skeleton before relying on it.",
       ),
     );
-  const ranked = [...context, ...out, ...later];
+  const conflict = complaints.some(s => s.area === "front-knee") && complaints.some(s => s.area === "back-knee");
+  if (conflict) later.unshift(advice("symptom-conflict", "information", "Knee symptoms suggest opposite changes", `Front and back knee discomfort can pull saddle height in opposite directions. Your most severe complaint is ${top.area.replaceAll("-", " ")} (${top.severity}/10).`, "Use the reviewed knee angle to choose the first small change; track each symptom separately and revert if either worsens. Do not use pain location alone to override the measurement."));
+  const cautioned = new Set(complaints.filter(s => s.sharpSuddenWorsening).map(s => symptomGroup(s.area)));
+  const ranked = [...context, ...out, ...later].map(r => {
+    const group = r.id === "saddle" || r.id === "setback" ? "knee" : r.id === "reach" || r.id === "bar-width" ? "hands" : r.id === "cleat" ? "feet" : "";
+    return group && cautioned.has(group) && r.outcome === "experiment" ? { ...r, outcome: "information" as const, action: `Hold this change until the ${group} symptom has been assessed. ${r.action}` } : r;
+  });
   let p = 1;
   return ranked.map((r) =>
     r.outcome === "experiment" ? { ...r, priority: p++ } : r,

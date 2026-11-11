@@ -1,8 +1,18 @@
-export const RULE_VERSION = "0.3.0";
+export const RULE_VERSION = "0.4.0";
 export const evidence: Record<
   string,
   { title: string; url: string; limit: string }
 > = {
+  "cycling-injuries": {
+    title: "Common cycling injuries: management and prevention (1991)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/2011683/",
+    limit: "Review describes knee, back, neck, hand and saddle complaints. The area list is for recording symptoms, not diagnosing their cause.",
+  },
+  "cycling-overuse": {
+    title: "Factors associated with overuse injury in cyclists: systematic review (2022)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/35151569/",
+    limit: "No strong evidence links a single bike, body or load measure to overuse pain; symptom location alone cannot prescribe an adjustment.",
+  },
   "nhs-back": {
     title: "NHS: Back pain",
     url: "https://www.nhs.uk/conditions/back-pain/",

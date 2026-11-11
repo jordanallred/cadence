@@ -51,6 +51,20 @@ it("urgent symptoms override apparently good clips", () =>
   expect(
     recommend({ ...intake, screen: "urgent-knee" }, clips(), [])[0]?.urgency,
   ).toBe("urgent"));
+it("an unanswered screen and follow-up cautions retain measured advice", () => {
+  const r = recommend({ ...defaultIntake, symptom: "knee", saddleHeight: 740 }, clips(20), [
+    { id: "w", at: "now", kind: "ride", detail: "", response: "worse" },
+  ]);
+  expect(r.some((x) => x.id === "screen")).toBe(true);
+  expect(r.find((x) => x.id === "saddle")?.estimate?.minMm).toBeGreaterThan(0);
+});
+it("multiple symptoms preserve the most severe complaint and report conflicts", () => {
+  const r = recommend({ ...intake, saddleHeight: 740, symptoms: [
+    { area: "front-knee", side: "left", severity: 5, onset: "", sharpSuddenWorsening: false },
+    { area: "back-knee", side: "right", severity: 7, onset: "", sharpSuddenWorsening: false },
+  ] }, clips(20), []);
+  expect(r.some((x) => x.id === "symptom-conflict")).toBe(true);
+});
 it("rejected clips cannot support an adjustment", () =>
   expect(
     experiment(
@@ -95,11 +109,11 @@ it("a high knee angle means raising the saddle", () =>
   expect(
     experiment(recommend({ ...intake, symptom: "knee" }, clips(50), []))?.title,
   ).toMatch(/Raise/));
-it("millimetres are only given when saddle height is known", () => {
+it("a conservative millimetre step is given without saddle height", () => {
   const without = experiment(
     recommend({ ...intake, symptom: "knee" }, clips(20), []),
   );
-  expect(without?.estimate).toBeUndefined();
+  expect(without?.estimate?.minMm).toBe(3);
   const withHeight = experiment(
     recommend(
       { ...intake, symptom: "knee", saddleHeight: 740, crankLength: 172.5 },

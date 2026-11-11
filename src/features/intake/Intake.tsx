@@ -1,4 +1,4 @@
-import type { Intake as Profile } from "../../domain/types";
+import { symptomAreas, type Intake as Profile, type SymptomEntry } from "../../domain/types";
 import { Field, Check } from "../../components/Fields";
 import { SetupMeasurements } from "./SetupMeasurements";
 export function Intake({
@@ -82,52 +82,23 @@ export function Intake({
           <h2>Comfort & context</h2>
         </div>
         <div className="form-grid">
-          <Field label="Main area of discomfort">
-            <select
-              value={value.symptom}
-              onChange={(e) =>
-                set("symptom", e.target.value as Profile["symptom"])
-              }
-            >
-              {[
-                ["none", "No discomfort"],
-                ["knee", "Knee"],
-                ["back", "Back"],
-                ["neck", "Neck / shoulders"],
-                ["hands", "Hands"],
-                ["saddle", "Saddle contact"],
-                ["feet", "Feet"],
-                ["other", "Other"],
-              ].map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field
-            label={`Discomfort · ${value.severity} / 10`}
-            hint="0 = none, 10 = worst imaginable"
-          >
-            <input
-              type="range"
-              min="0"
-              max="10"
-              value={value.severity}
-              onChange={(e) => set("severity", +e.target.value)}
-            />
-          </Field>
-          <Field
-            label="When does it start?"
-            hint="Time into a ride, recent onset, or a specific position."
-          >
-            <input
-              maxLength={500}
-              value={value.onset}
-              onChange={(e) => set("onset", e.target.value)}
-              placeholder="e.g. After 45 minutes on the hoods"
-            />
-          </Field>
+          <div className="symptom-list">
+            <h3>Areas of discomfort</h3>
+            <p>Add each area separately, including its side and severity.</p>
+            {value.symptoms.map((symptom, index) => {
+              const update = (patch: Partial<SymptomEntry>) => set("symptoms", value.symptoms.map((item, n) => n === index ? { ...item, ...patch } : item));
+              return <div className="symptom-entry" key={index}>
+                <Field label="Area"><select value={symptom.area} onChange={e => update({ area: e.target.value as SymptomEntry["area"] })}>{symptomAreas.map(([id, label]) => <option value={id} key={id}>{label}</option>)}</select></Field>
+                <Field label="Side"><select value={symptom.side} onChange={e => update({ side: e.target.value as SymptomEntry["side"] })}><option value="left">Left</option><option value="right">Right</option><option value="both">Both</option><option value="center">Center</option></select></Field>
+                <Field label={`Severity · ${symptom.severity}/10`}><input type="range" min="0" max="10" value={symptom.severity} onChange={e => update({ severity: +e.target.value })} /></Field>
+                <Field label="When does it start?"><input maxLength={500} value={symptom.onset} onChange={e => update({ onset: e.target.value })} placeholder="e.g. After 45 minutes" /></Field>
+                <Check label="Sharp, sudden or getting worse" checked={symptom.sharpSuddenWorsening} onChange={v => update({ sharpSuddenWorsening: v })} />
+                <button type="button" className="secondary" onClick={() => set("symptoms", value.symptoms.filter((_, n) => n !== index))}>Remove area</button>
+              </div>;
+            })}
+            <button type="button" className="secondary" disabled={value.symptoms.length >= 12} onClick={() => set("symptoms", [...value.symptoms, { area: "front-knee", side: "both", severity: 3, onset: "", sharpSuddenWorsening: false }])}>+ Add another area</button>
+            <small>Areas are based on <a href="https://pubmed.ncbi.nlm.nih.gov/2011683/" target="_blank" rel="noreferrer">cycling injury reviews</a>. They describe where you feel symptoms; they do not identify a cause.</small>
+          </div>
           <Field label="Movement limitations or clinician restrictions">
             <input
               maxLength={1500}
