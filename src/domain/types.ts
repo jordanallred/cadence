@@ -12,6 +12,9 @@ export const frameSchema = z.object({
 });
 export const viewSchema = z.enum(["left", "right", "front", "rear"]);
 export type View = z.infer<typeof viewSchema>;
+/** How a view is named to riders: "Left side", "Front". */
+export const viewLabel = (v: View) =>
+  ({ left: "Left side", right: "Right side", front: "Front", rear: "Rear" })[v];
 export type Point = z.infer<typeof pointSchema>;
 export type PoseFrame = z.infer<typeof frameSchema>;
 /**

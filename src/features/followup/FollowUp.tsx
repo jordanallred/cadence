@@ -12,6 +12,32 @@ import {
 } from "../../fit/compare";
 import { loggedSettings, measurement } from "../../fit/measurements";
 import { holdOf } from "../../fit/assessment";
+/** The setting a recommended change is logged under. */
+const LOGGED_AS: Partial<
+  Record<
+    NonNullable<Recommendation["estimate"]>["setting"],
+    NonNullable<FitEvent["setting"]>
+  >
+> = {
+  saddleHeight: "saddleHeight",
+  saddleSetback: "saddleSetback",
+  saddleTilt: "saddleTilt",
+  stem: "stemLength",
+  spacers: "barDrop",
+  barWidth: "barWidth",
+  cleat: "cleatOffset",
+};
+const EVENT_NAME: Record<FitEvent["kind"], string> = {
+  adjustment: "Change",
+  revert: "Reverted",
+  retain: "Kept",
+  ride: "Ride",
+};
+const RESPONSE = {
+  better: "better than before",
+  same: "about the same",
+  worse: "worse than before",
+} as const;
 export function FollowUp({
   session,
   onChange,
@@ -25,10 +51,14 @@ export function FollowUp({
   onRecord: () => void;
   onReport: () => void;
 }) {
-  const [setting, setSetting] =
-      useState<NonNullable<FitEvent["setting"]>>("saddleHeight"),
+  const suggested = results.find((r) => r.outcome === "experiment");
+  const [setting, setSetting] = useState<NonNullable<FitEvent["setting"]>>(
+      suggested?.estimate
+        ? (LOGGED_AS[suggested.estimate.setting] ?? "other")
+        : "saddleHeight",
+    ),
     [after, setAfter] = useState(""),
-    [detail, setDetail] = useState(""),
+    [detail, setDetail] = useState(suggested?.title ?? ""),
     [duration, setDuration] = useState("45"),
     [intensity, setIntensity] = useState<"easy" | "moderate" | "hard">("easy"),
     [comfort, setComfort] = useState(5),
@@ -48,6 +78,16 @@ export function FollowUp({
     return top ? headlineText(top) : undefined;
   };
   const activeResult = active && result(active);
+  const betterRide =
+    !!active &&
+    session.events.some(
+      (e) =>
+        e.kind === "ride" &&
+        e.experimentId === active.id &&
+        e.response === "better",
+    );
+  const needsRestoreNote =
+    !!active && (active.before == null || active.setting === "other");
   const add = (e: Omit<FitEvent, "id" | "at">) => {
     try {
       onChange(
@@ -98,8 +138,16 @@ export function FollowUp({
                 <small>Your previous setup remains in the history.</small>
               </div>
               <Field
-                label="Decision / restoration notes"
-                hint="Required when the original setting was unknown."
+                label={
+                  needsRestoreNote
+                    ? "How will you put it back if you revert?"
+                    : "Notes on your decision (optional)"
+                }
+                hint={
+                  needsRestoreNote
+                    ? "The setting before this change was not measured, so describe how you restored it."
+                    : undefined
+                }
               >
                 <textarea
                   value={detail}
@@ -119,15 +167,8 @@ export function FollowUp({
                 </button>
                 <button
                   className="primary"
-                  disabled={
-                    blocked ||
-                    !session.events.some(
-                      (e) =>
-                        e.kind === "ride" &&
-                        e.experimentId === active.id &&
-                        e.response === "better",
-                    )
-                  }
+                  disabled={blocked || !betterRide}
+                  aria-describedby={!betterRide ? "keep-needs-ride" : undefined}
                   onClick={() =>
                     add({ kind: "retain", experimentId: active.id, detail })
                   }
@@ -136,6 +177,12 @@ export function FollowUp({
                   Keep improvement
                 </button>
               </div>
+              {!betterRide && !blocked && (
+                <p className="muted keep-hint" id="keep-needs-ride">
+                  Keep becomes available once you save a ride with this change
+                  that felt better than before.
+                </p>
+              )}
               {activeResult ? (
                 <p className="compare-summary">
                   {activeResult}{" "}
@@ -152,11 +199,15 @@ export function FollowUp({
           ) : (
             <>
               {experiment ? (
-                <Notice>{experiment.action}</Notice>
+                <Notice>
+                  <span>
+                    <strong>{experiment.title}.</strong> {experiment.action}
+                  </span>
+                </Notice>
               ) : (
                 <p className="muted">
-                  Log a change you made with appropriate guidance. The app may
-                  recommend no change.
+                  Nothing to change right now. If you adjust something anyway,
+                  log it here so the next recording is compared with it.
                 </p>
               )}
               <Field label="Setting">
@@ -231,10 +282,15 @@ export function FollowUp({
                 <Plus size={16} />
                 Start experiment
               </button>
-              {!session.intake.mechanicalLimits && (
-                <small>
-                  Confirm mechanical limits and tools in Your starting point
-                  first.
+              {!blocked && (
+                <small className="start-hint">
+                  {!session.intake.mechanicalLimits
+                    ? "Confirm mechanical limits and tools in Your starting point first."
+                    : setting !== "other" && !after
+                      ? "Enter the new setting you measured after the change."
+                      : !detail.trim()
+                        ? "Describe what you changed."
+                        : ""}
                 </small>
               )}
             </>
@@ -335,16 +391,16 @@ export function FollowUp({
                 <span className="timeline-dot" />
                 <div>
                   <span className="eyebrow">
-                    {e.kind} · {new Date(e.at).toLocaleDateString()}
+                    {EVENT_NAME[e.kind]}, {new Date(e.at).toLocaleDateString()}
                   </span>
                   <h3>
                     {e.kind === "ride"
-                      ? `${e.duration} min · ${e.intensity} · ${e.response}`
-                      : e.detail || e.kind}
+                      ? `${e.duration} min ${e.intensity} ride, ${RESPONSE[e.response ?? "same"]}`
+                      : e.detail || EVENT_NAME[e.kind]}
                   </h3>
                   {e.kind === "ride" && (
                     <p>
-                      Comfort {e.comfort}/10 · {e.detail}
+                      Comfort {e.comfort}/10{e.detail ? `. ${e.detail}` : ""}
                     </p>
                   )}
                   {(e.kind === "adjustment" || e.kind === "revert") && (
