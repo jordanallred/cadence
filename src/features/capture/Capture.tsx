@@ -579,30 +579,45 @@ export function Capture({
           </div>
         ) : (
           <div className="clip-list">
-            {clips.map((c) => (
-              <button key={c.id} onClick={() => onReview(c)}>
-                <Film size={20} />
-                <span>
-                  <strong>{viewLabel(c.view)} view</strong>
-                  <small>
-                    {c.name} · Setup {c.setupRevision + 1}
-                  </small>
-                </span>
-                <span className="clip-status">
-                  {c.quality.some((q) => q.severity === "reject") ? (
-                    "Needs a new recording"
-                  ) : c.reviewed ? (
-                    <>
-                      <CheckCircle2 size={15} />
-                      Reviewed
-                    </>
-                  ) : (
-                    "Review tracking"
-                  )}
-                </span>
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-            ))}
+            {[...clips]
+              // Current setup first, newest first; earlier setups after.
+              .sort(
+                (a, b) =>
+                  b.setupRevision - a.setupRevision ||
+                  b.createdAt.localeCompare(a.createdAt),
+              )
+              .map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => onReview(c)}
+                  className={
+                    c.setupRevision !== revision ? "earlier" : undefined
+                  }
+                >
+                  <Film size={20} />
+                  <span>
+                    <strong>{viewLabel(c.view)} view</strong>
+                    <small>
+                      {c.name} · Setup {c.setupRevision + 1}
+                      {c.setupRevision !== revision &&
+                        ", before your last change"}
+                    </small>
+                  </span>
+                  <span className="clip-status">
+                    {c.quality.some((q) => q.severity === "reject") ? (
+                      "Needs a new recording"
+                    ) : c.reviewed ? (
+                      <>
+                        <CheckCircle2 size={15} />
+                        Reviewed
+                      </>
+                    ) : (
+                      "Review tracking"
+                    )}
+                  </span>
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              ))}
           </div>
         )}
       </section>

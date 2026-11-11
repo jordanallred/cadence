@@ -512,7 +512,7 @@ main {
   gap: 13px;
   align-items: center;
   padding: 14px 0;
-  color: #a5b29a;
+  color: var(--muted);
 }
 .empty-inline p {
   font-size: 13px;
@@ -725,7 +725,7 @@ progress {
 }
 .coverage-strip {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--line);
   border-radius: 9px;
   margin-bottom: 28px;
@@ -908,7 +908,7 @@ dd {
   margin: 0;
 }
 .timeline small {
-  color: #85917c;
+  color: var(--muted);
 }
 .workspace-footer {
   border-top: 1px solid var(--line);
@@ -922,7 +922,7 @@ dd {
 .workspace-footer p {
   font-size: 12px;
   margin: 6px 0 0;
-  color: #8e9a83;
+  color: var(--muted);
 }
 .footer-tools {
   display: flex;
@@ -1131,7 +1131,7 @@ dd {
   }
   .coverage-strip span {
     width: 100%;
-    margin-left: 24px;
+    padding-left: 24px;
     font-size: 12px;
   }
   .camera-row {
@@ -2246,4 +2246,54 @@ label:focus-within {
 }
 .remove-recording span {
   flex: 1 1 260px;
+}
+.recommendation.collapsed .rec-body {
+  display: none;
+}
+.recommendation.collapsed {
+  padding-bottom: 18px;
+}
+.rec-toggle {
+  gap: 4px;
+  margin-top: 4px;
+}
+.estimate-line {
+  margin: 6px 0 0;
+  color: var(--green);
+}
+.keep-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+@media print {
+  .recommendation.collapsed .rec-body {
+    display: block;
+  }
+  .estimate-line {
+    display: none;
+  }
+}
+.clip-list .earlier strong {
+  color: var(--muted);
+  font-weight: 500;
+}
+.start-hint {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+}
+@media (max-width: 600px) {
+  .compare-table {
+    font-size: 13px;
+  }
+  .compare-table th,
+  .compare-table td {
+    padding-right: 8px;
+  }
+  .compare-table td {
+    white-space: normal;
+  }
+  .range.compare .range-head {
+    flex-wrap: wrap;
+  }
 }

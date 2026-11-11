@@ -1,4 +1,12 @@
-import { CheckCircle2, Circle, Printer, Info } from "lucide-react";
+import { useState } from "react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Printer,
+  Info,
+} from "lucide-react";
 import {
   viewLabel,
   type Session,
@@ -68,6 +76,16 @@ export function Report({
   );
   const drawn = side ? positionMetrics(side) : new Set<string>();
   const comfortable = session.intake.symptoms.length === 0;
+  // The first change, safety advice and missing information stay open;
+  // later changes start folded so the report reads in order.
+  const first = results.find((r) => r.outcome === "experiment")?.id;
+  const collapsible = (r: Recommendation) =>
+    r.urgency === "routine" &&
+    r.id !== first &&
+    (r.outcome === "experiment" ||
+      r.outcome === "equipment-training" ||
+      r.outcome === "no-change");
+  const [opened, setOpened] = useState<Set<string>>(new Set());
   return (
     <>
       <div className="section-title report-title">
@@ -120,86 +138,120 @@ export function Report({
       <SymptomPlan intake={session.intake} results={results} />
       <div className="report-grid">
         <div>
-          {results.map((r) => (
-            <section
-              key={r.id}
-              className={"recommendation " + r.outcome + " " + r.urgency}
-            >
-              <p className="recommendation-kind">
-                {r.urgency !== "routine"
-                  ? r.urgency === "emergency"
-                    ? "Emergency"
-                    : "Urgent"
-                  : kindLabel[r.outcome]}
-              </p>
-              <h2>{r.title}</h2>
-              {(r.priority || r.confidence) && (
-                <div className="chips">
-                  {r.priority === 1 && (
-                    <span className="chip strong">
-                      {comfortable
-                        ? "First, if you change anything"
-                        : "Do this first"}
-                    </span>
-                  )}
-                  {r.priority && r.priority > 1 && (
-                    <span className="chip">Later · one change at a time</span>
-                  )}
-                  {r.confidence && (
-                    <span className="chip">
-                      {r.confidence[0].toUpperCase() + r.confidence.slice(1)}{" "}
-                      confidence
-                    </span>
-                  )}
-                </div>
-              )}
-              <p>{r.observations}</p>
-              {r.estimate &&
-                (r.outcome === "no-change" ? (
-                  <p className="estimate-optional">
-                    If you decide to change it:{" "}
-                    <strong>{estimateText(r.estimate)}</strong>.{" "}
-                    {r.estimate.basis}
-                  </p>
-                ) : (
-                  <div className="estimate">
-                    <strong>{estimateText(r.estimate)}</strong>
-                    <small>{r.estimate.basis}</small>
+          {results.map((r) => {
+            const shut = collapsible(r) && !opened.has(r.id);
+            return (
+              <section
+                key={r.id}
+                className={
+                  "recommendation " +
+                  r.outcome +
+                  " " +
+                  r.urgency +
+                  (shut ? " collapsed" : "")
+                }
+              >
+                <p className="recommendation-kind">
+                  {r.urgency !== "routine"
+                    ? r.urgency === "emergency"
+                      ? "Emergency"
+                      : "Urgent"
+                    : kindLabel[r.outcome]}
+                </p>
+                <h2>{r.title}</h2>
+                {(r.priority || r.confidence) && (
+                  <div className="chips">
+                    {r.priority === 1 && (
+                      <span className="chip strong">
+                        {comfortable
+                          ? "First, if you change anything"
+                          : "Do this first"}
+                      </span>
+                    )}
+                    {r.priority && r.priority > 1 && (
+                      <span className="chip">Change {r.priority}, later</span>
+                    )}
+                    {r.confidence && (
+                      <span className="chip">
+                        {r.confidence[0].toUpperCase() + r.confidence.slice(1)}{" "}
+                        confidence
+                      </span>
+                    )}
                   </div>
-                ))}
-              <div className="action">
-                <strong>What to do</strong>
-                <p>{r.action}</p>
-              </div>
-              <details>
-                <summary>Why this recommendation?</summary>
-                <dl>
-                  <dt>Other explanations</dt>
-                  <dd>{r.alternatives}</dd>
-                  <dt>Before acting</dt>
-                  <dd>{r.prerequisites}</dd>
-                  <dt>What to recheck</dt>
-                  <dd>{r.recheck}</dd>
-                </dl>
-                <div className="source-links">
-                  {r.sources.map(
-                    (id) =>
-                      evidence[id] && (
-                        <a
-                          key={id}
-                          href={evidence[id].url}
-                          target={id === "product" ? undefined : "_blank"}
-                          rel="noreferrer"
-                        >
-                          {evidence[id].title}
-                        </a>
-                      ),
-                  )}
+                )}
+                {shut && r.estimate && r.outcome !== "no-change" && (
+                  <p className="estimate-line">
+                    <strong>{estimateText(r.estimate)}</strong>
+                  </p>
+                )}
+                {collapsible(r) && (
+                  <button
+                    className="text-button no-print rec-toggle"
+                    aria-expanded={!shut}
+                    aria-controls={r.id + "-body"}
+                    onClick={() =>
+                      setOpened((o) => {
+                        const n = new Set(o);
+                        if (n.has(r.id)) n.delete(r.id);
+                        else n.add(r.id);
+                        return n;
+                      })
+                    }
+                  >
+                    {shut ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                    {shut ? "Show details" : "Hide details"}
+                  </button>
+                )}
+                <div className="rec-body" id={r.id + "-body"}>
+                  <p>{r.observations}</p>
+                  {r.estimate &&
+                    (r.outcome === "no-change" ? (
+                      <p className="estimate-optional">
+                        If you decide to change it:{" "}
+                        <strong>{estimateText(r.estimate)}</strong>.{" "}
+                        {r.estimate.basis}
+                      </p>
+                    ) : (
+                      <div className="estimate">
+                        <strong>{estimateText(r.estimate)}</strong>
+                        <small>{r.estimate.basis}</small>
+                      </div>
+                    ))}
+                  <div className="action">
+                    <strong>What to do</strong>
+                    <p>{r.action}</p>
+                  </div>
+                  <details>
+                    <summary>Why this recommendation?</summary>
+                    <dl>
+                      <dt>Other explanations</dt>
+                      <dd>{r.alternatives}</dd>
+                      <dt>Before acting</dt>
+                      <dd>{r.prerequisites}</dd>
+                      <dt>What to recheck</dt>
+                      <dd>{r.recheck}</dd>
+                    </dl>
+                    <div className="source-links">
+                      {r.sources.map(
+                        (id) =>
+                          evidence[id] && (
+                            <a
+                              key={id}
+                              href={evidence[id].url}
+                              target={id === "product" ? undefined : "_blank"}
+                              rel="noreferrer"
+                            >
+                              {evidence[id].title}
+                            </a>
+                          ),
+                      )}
+                    </div>
+                    <small>Decision policy {r.ruleVersion}</small>
+                  </details>
                 </div>
-                <small>Decision policy {r.ruleVersion}</small>
-              </details>
-            </section>
-          ))}
+              </section>
+            );
+          })}
         </div>
         <aside>
           <section className="panel">

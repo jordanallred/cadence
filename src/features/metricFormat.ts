@@ -11,3 +11,8 @@ export function metricValue(m: Pick<Metric, "value" | "unit">) {
 export function metricUnit(unit: string) {
   return unit === "°" ? "°" : ` ${unit}`;
 }
+
+/** "23.7°", "1.02 ratio", "-3.1 % thigh". */
+export function showMetric(value: number, unit: string) {
+  return metricValue({ value, unit }) + metricUnit(unit);
+}

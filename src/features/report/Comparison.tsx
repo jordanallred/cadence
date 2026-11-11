@@ -1,3 +1,4 @@
+import { showMetric } from "../metricFormat";
 import { useId, useState } from "react";
 import type { KeyMoment, Session } from "../../domain/types";
 import {
@@ -143,14 +144,8 @@ export function Comparison({ session }: { session: Session }) {
             {plain.map((m) => (
               <tr key={m.id} className={m.withinNoise ? "same" : undefined}>
                 <th scope="row">{m.label}</th>
-                <td>
-                  {m.before}
-                  {m.unit}
-                </td>
-                <td>
-                  {m.after}
-                  {m.unit}
-                </td>
+                <td>{showMetric(m.before, m.unit)}</td>
+                <td>{showMetric(m.after, m.unit)}</td>
                 <td>{m.withinNoise ? "About the same" : delta(m)}</td>
               </tr>
             ))}
@@ -166,7 +161,7 @@ export function Comparison({ session }: { session: Session }) {
 }
 
 const delta = (m: MetricChange) =>
-  `${m.delta > 0 ? "+" : "−"}${Math.abs(m.delta)}${m.unit}`;
+  `${m.delta > 0 ? "+" : "−"}${showMetric(Math.abs(m.delta), m.unit)}`;
 
 /** Before and after marks on one target-range bar. */
 function CompareBar({ change: m }: { change: MetricChange }) {
@@ -191,12 +186,8 @@ function CompareBar({ change: m }: { change: MetricChange }) {
       <div className="range-head">
         <span>{m.label}</span>
         <strong>
-          <span className="was">
-            {m.before}
-            {m.unit}
-          </span>{" "}
-          → {m.after}
-          {m.unit}
+          <span className="was">{showMetric(m.before, m.unit)}</span> →{" "}
+          {showMetric(m.after, m.unit)}
         </strong>
       </div>
       <div
