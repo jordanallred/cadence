@@ -49,3 +49,23 @@ func TestQuitNeedsHeader(t *testing.T) {
 		t.Fatalf("foreign host: %d", w.Code)
 	}
 }
+
+func TestNewerVersion(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want bool
+	}{
+		{"v0.6.0", "v0.5.9", true},
+		{"v0.5.9", "v0.6.0", false},
+		{"v0.10.0", "v0.9.0", true},
+		{"v1.0.0", "v1.0.0", false},
+		{"dev", "v0.6.0", false},
+		{"v0.6.0", "dev", true},
+		{"", "v0.6.0", false},
+	}
+	for _, c := range cases {
+		if got := newerVersion(c.a, c.b); got != c.want {
+			t.Errorf("newerVersion(%q, %q) = %v", c.a, c.b, got)
+		}
+	}
+}
