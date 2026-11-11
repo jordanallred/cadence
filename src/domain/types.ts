@@ -118,10 +118,72 @@ export function migrateIntake(raw: unknown): unknown {
           rest[key] = Math.round((rest[key] as number) * 10) / 10;
   }
   if ("symptom" in rest || "severity" in rest) rest = migrateSymptom(rest);
+  if (Array.isArray(rest.symptoms)) {
+    rest = { ...rest };
+    rest.symptoms = migrateEntries(rest.symptoms as unknown[], rest);
+  }
   return rest;
 }
 /**
- * Profiles before rules 0.4.0 had one broad symptom and one severity. Each
+ * v0.6.2 saved its own symptom entries: other area ids, a "center" side,
+ * severity from 0, a `sharpSuddenWorsening` flag and an onset per entry.
+ * Current entries pass through unchanged.
+ */
+const v062Area: Record<string, SymptomArea> = {
+  "front-knee": "knee-front",
+  "back-knee": "knee-back",
+  "inner-knee": "knee-inner",
+  "outer-knee": "knee-outer",
+  hip: "hip-front",
+  shoulder: "upper-back",
+  "hands-numb": "hand-numb",
+  "hands-pain": "wrist",
+  "hot-foot": "foot-numb",
+};
+function migrateEntries(list: unknown[], intake: Record<string, unknown>) {
+  const out: Record<string, unknown>[] = [];
+  for (const raw of list) {
+    if (!raw || typeof raw !== "object") continue;
+    const e = raw as Record<string, unknown>;
+    if (
+      !("sharpSuddenWorsening" in e) &&
+      !("onset" in e) &&
+      e.side !== "center"
+    ) {
+      out.push(e);
+      continue;
+    }
+    const area =
+      typeof e.area === "string" ? (v062Area[e.area] ?? e.area) : e.area;
+    const severity =
+      typeof e.severity === "number"
+        ? Math.min(10, Math.max(1, Math.round(e.severity)))
+        : 3;
+    const entry = {
+      area,
+      side: e.side === "left" || e.side === "right" ? e.side : "both",
+      severity,
+      warning: e.sharpSuddenWorsening === true || e.warning === true,
+    };
+    if (
+      typeof e.onset === "string" &&
+      e.onset.trim() &&
+      !String(intake.onset ?? "").trim()
+    )
+      intake.onset = e.onset;
+    // Two old areas can map to one (shoulder and upper back): keep the worse.
+    const same = out.find(
+      (x) => x.area === entry.area && x.side === entry.side,
+    );
+    if (same) {
+      same.severity = Math.max(same.severity as number, severity);
+      same.warning = same.warning === true || entry.warning;
+    } else out.push(entry);
+  }
+  return out;
+}
+/**
+ * Profiles before rules 0.4.0 (v0.6.1 and earlier) had one broad symptom and one severity. Each
  * maps to the most common specific area for that region; the rider can
  * change it in Your starting point.
  */

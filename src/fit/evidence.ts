@@ -1,8 +1,15 @@
-export const RULE_VERSION = "0.4.0";
+export const RULE_VERSION = "0.5.0";
 export const evidence: Record<
   string,
   { title: string; url: string; limit: string }
 > = {
+  "cycling-overuse": {
+    title:
+      "Factors associated with overuse injury in cyclists: systematic review (2022)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/35151569/",
+    limit:
+      "No strong evidence links a single bike, body or load measure to overuse pain; symptom location alone cannot prescribe an adjustment.",
+  },
   "nhs-back": {
     title: "NHS: Back pain",
     url: "https://www.nhs.uk/conditions/back-pain/",

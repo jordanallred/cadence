@@ -70,7 +70,7 @@ describe("catalogue", () => {
 });
 
 describe("feedback is not withheld", () => {
-  // The case that produced no advice before rules 0.4.0: a symptom, the
+  // The case that produced no advice before rules 0.5.0: a symptom, the
   // safety check left unanswered, persistent and severe.
   it("an unanswered check, persistence and 8/10 still give ranked mm changes", () => {
     const r = recommend(
@@ -268,4 +268,58 @@ it("a milder symptom that loses a conflict is named as outweighed", () => {
   const s = r.find((x) => x.id === "saddle")!;
   expect(s.targets).toContain("knee-front");
   expect(s.against).toContain("knee-back");
+});
+
+it("loads symptom entries saved by v0.6.2", () => {
+  const old = {
+    ...defaultIntake,
+    symptom: "knee",
+    severity: 5,
+    onset: "",
+    symptoms: [
+      {
+        area: "front-knee",
+        side: "left",
+        severity: 5,
+        onset: "After 40 min",
+        sharpSuddenWorsening: false,
+      },
+      {
+        area: "lower-back",
+        side: "center",
+        severity: 0,
+        onset: "",
+        sharpSuddenWorsening: true,
+      },
+      {
+        area: "shoulder",
+        side: "center",
+        severity: 3,
+        onset: "",
+        sharpSuddenWorsening: false,
+      },
+      {
+        area: "upper-back",
+        side: "both",
+        severity: 6,
+        onset: "",
+        sharpSuddenWorsening: false,
+      },
+      {
+        area: "hot-foot",
+        side: "right",
+        severity: 4,
+        onset: "",
+        sharpSuddenWorsening: false,
+      },
+    ],
+  } as Record<string, unknown>;
+  const i = intakeSchema.parse(old);
+  expect(i.symptoms).toEqual([
+    { area: "knee-front", side: "left", severity: 5, warning: false },
+    { area: "lower-back", side: "both", severity: 1, warning: true },
+    { area: "upper-back", side: "both", severity: 6, warning: false },
+    { area: "foot-numb", side: "right", severity: 4, warning: false },
+  ]);
+  expect(i.onset).toBe("After 40 min");
 });

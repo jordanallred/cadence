@@ -118,8 +118,13 @@ const sideOf = (vs: Vote[]) => {
 };
 const causes = (vs: Vote[]) =>
   [...new Set(vs.map((v) => AREAS[v.s.area].cause))].join(" ");
+/** Symptom-driven changes also cite the review on how weak those links are. */
 const srcs = (vs: Vote[], base: string[]) => [
-  ...new Set([...base, ...vs.flatMap((v) => AREAS[v.s.area].sources)]),
+  ...new Set([
+    ...base,
+    ...vs.flatMap((v) => AREAS[v.s.area].sources),
+    ...(vs.length ? ["cycling-overuse"] : []),
+  ]),
 ];
 /**
  * Two groups of symptoms pull one way and the other. Returns the winning
