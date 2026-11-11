@@ -6,10 +6,7 @@ import type { Point } from "../src/domain/types";
 const pose = (cx: number, scale: number, ankleY: number): Point[] =>
   Array.from({ length: 33 }, (_, j) => ({
     x: cx + scale * (j % 2 ? -0.05 : 0.05),
-    y:
-      j >= 27
-        ? ankleY
-        : 0.5 + scale * (j >= 25 ? 0.1 : j >= 23 ? -0.1 : -0.3),
+    y: j >= 27 ? ankleY : 0.5 + scale * (j >= 25 ? 0.1 : j >= 23 ? -0.1 : -0.3),
     visibility: 1,
   }));
 const rider = (n: number) =>

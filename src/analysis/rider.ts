@@ -60,7 +60,10 @@ export function selectRider(raw: RawFrame[]): PoseFrame[] {
     for (const t of open) {
       if (frame.timeMs - t.lastMs > 1500) continue;
       info.forEach((pi, p) => {
-        const d = Math.hypot(pi.center.x - t.center.x, pi.center.y - t.center.y);
+        const d = Math.hypot(
+          pi.center.x - t.center.x,
+          pi.center.y - t.center.y,
+        );
         if (d < Math.max(0.08, 0.5 * pi.size)) pairs.push({ t, p, d });
       });
     }

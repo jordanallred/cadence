@@ -112,7 +112,8 @@ export function motionBounds(
 ): { start: number; end: number } {
   const n = ys.length;
   const span = quantile(ys, 0.95) - quantile(ys, 0.05);
-  if (n < 2 || span <= 0) return { start: times[0] ?? 0, end: times.at(-1) ?? 0 };
+  if (n < 2 || span <= 0)
+    return { start: times[0] ?? 0, end: times.at(-1) ?? 0 };
   const rangeOf = (from: number, to: number) => {
     let lo = Infinity,
       hi = -Infinity;
@@ -129,7 +130,11 @@ export function motionBounds(
   for (let i = 0; i < n; i++) {
     if (rangeOf(times[i], times[i] + 1) < 0.5 * span) continue;
     let j = i + 1;
-    while (j < n && times[j] <= times[i] + 1 && Math.abs(ys[j] - ys[i]) <= 0.15 * span)
+    while (
+      j < n &&
+      times[j] <= times[i] + 1 &&
+      Math.abs(ys[j] - ys[i]) <= 0.15 * span
+    )
       j++;
     start = times[Math.min(j, n - 1) - 1];
     break;
@@ -138,7 +143,11 @@ export function motionBounds(
   for (let i = n - 1; i >= 0; i--) {
     if (rangeOf(times[i] - 1, times[i]) < 0.5 * span) continue;
     let j = i - 1;
-    while (j >= 0 && times[j] >= times[i] - 1 && Math.abs(ys[j] - ys[i]) <= 0.15 * span)
+    while (
+      j >= 0 &&
+      times[j] >= times[i] - 1 &&
+      Math.abs(ys[j] - ys[i]) <= 0.15 * span
+    )
       j--;
     end = times[Math.max(j, 0) + 1];
     break;
