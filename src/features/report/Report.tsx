@@ -9,6 +9,7 @@ import type { Session, Recommendation } from "../../domain/types";
 import { evidence } from "../../fit/evidence";
 import { exportSession } from "../../storage/portable";
 import { Notice } from "../../components/Fields";
+import { PositionReport, positionMetrics } from "./Visuals";
 export function Report({
   session,
   results,
@@ -24,12 +25,15 @@ export function Report({
   const selected = current.filter(
     (c) => !current.some((d) => d.view === c.view && d.createdAt > c.createdAt),
   );
+  const side = selected.find(
+    (c) => (c.view === "left" || c.view === "right") && c.metrics.length,
+  );
+  const drawn = side ? positionMetrics(side) : new Set<string>();
   return (
     <>
       <div className="section-title report-title">
         <div>
-          <span className="eyebrow">03 / YOUR FIT, UNDERSTOOD</span>
-          <h1>Evidence. Then action.</h1>
+          <h1>Fit report</h1>
           <p>
             {session.intake.name || "Your rider profile"} ·{" "}
             {session.intake.bike || "Your bike"} · Setup{" "}
@@ -72,6 +76,7 @@ export function Report({
           </div>
         ))}
       </div>
+      {side && <PositionReport clip={side} intake={session.intake} />}
       <div className="report-grid">
         <div>
           {results.map((r, n) => (
@@ -154,8 +159,7 @@ export function Report({
         </div>
         <aside>
           <section className="panel">
-            <span className="eyebrow">MOVEMENT SNAPSHOT</span>
-            <h2>What the videos show</h2>
+            <h2>{side ? "Other measurements" : "What the videos show"}</h2>
             {selected.length ? (
               selected.map((c) => (
                 <div className="snapshot" key={c.id}>
@@ -164,7 +168,11 @@ export function Report({
                     <span>{c.reviewed ? "Reviewed" : "Unreviewed"}</span>
                   </h3>
                   {c.metrics
-                    .filter((m) => m.id !== "cycles")
+                    .filter(
+                      (m) =>
+                        m.id !== "cycles" &&
+                        !(c.id === side?.id && drawn.has(m.id)),
+                    )
                     .map((m) => (
                       <div key={m.id}>
                         <span>{m.label}</span>

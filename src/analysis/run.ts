@@ -1,4 +1,4 @@
-import type { ClipAnalysis, PoseFrame, View } from "../domain/types";
+import type { ClipAnalysis, KeyMoment, PoseFrame, View } from "../domain/types";
 import { openVideo, seek, sampleTimes } from "../video/sample";
 import { measureClip } from "./metrics";
 import {
@@ -82,6 +82,29 @@ async function withPose<T>(
   }
 }
 
+/** A still of the video at `time` seconds, at most 640 px wide. */
+async function grab(
+  video: HTMLVideoElement,
+  time: number,
+  signal: AbortSignal,
+): Promise<string | undefined> {
+  try {
+    await seek(video, time, signal);
+    const scale = Math.min(1, 640 / video.videoWidth),
+      canvas = document.createElement("canvas");
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas
+      .getContext("2d")!
+      .drawImage(video, 0, 0, canvas.width, canvas.height);
+    const url = canvas.toDataURL("image/jpeg", 0.78);
+    return url.length < 300_000 ? url : undefined;
+  } catch (e) {
+    if (signal.aborted) throw e;
+    return undefined;
+  }
+}
+
 export async function analyze(
   file: File,
   view: View,
@@ -96,21 +119,36 @@ export async function analyze(
     (duration) => sampleTimes(duration, start, end),
     onProgress,
     signal,
-    (frames, video) => ({
-      id: crypto.randomUUID(),
-      view,
-      name: file.name,
-      size: file.size,
-      duration: video.duration,
-      width: video.videoWidth,
-      height: video.videoHeight,
-      frames,
-      ...measureClip(frames, view, video.videoWidth, video.videoHeight),
-      modelVersion: MODEL_VERSION,
-      createdAt: new Date().toISOString(),
-      setupRevision: revision,
-      reviewed: false,
-    }),
+    async (frames, video) => {
+      const { keyframes, ...measured } = measureClip(
+        frames,
+        view,
+        video.videoWidth,
+        video.videoHeight,
+      );
+      const stills: KeyMoment[] = [];
+      for (const k of keyframes ?? [])
+        stills.push({
+          ...k,
+          image: await grab(video, k.timeMs / 1000, signal),
+        });
+      return {
+        id: crypto.randomUUID(),
+        view,
+        name: file.name,
+        size: file.size,
+        duration: video.duration,
+        width: video.videoWidth,
+        height: video.videoHeight,
+        frames,
+        ...measured,
+        ...(stills.length ? { keyframes: stills } : {}),
+        modelVersion: MODEL_VERSION,
+        createdAt: new Date().toISOString(),
+        setupRevision: revision,
+        reviewed: false,
+      };
+    },
   );
 }
 

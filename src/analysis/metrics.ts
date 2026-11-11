@@ -4,6 +4,7 @@ import type {
   Metric,
   QualityIssue,
   Point,
+  KeyMoment,
 } from "../domain/types";
 import { angle, quantile, smoothSeries } from "./geometry";
 export const joints: Record<string, number> = {
@@ -62,9 +63,14 @@ export function measureClip(
   view: View,
   w: number,
   h: number,
-): { metrics: Metric[]; quality: QualityIssue[] } {
+): {
+  metrics: Metric[];
+  quality: QualityIssue[];
+  keyframes?: Omit<KeyMoment, "image">[];
+} {
   const quality: QualityIssue[] = [],
     metrics: Metric[] = [];
+  const keyframes: Omit<KeyMoment, "image">[] = [];
   const reject = (code: string, message: string) => ({
     metrics: [],
     quality: [...quality, { code, severity: "reject" as const, message }],
@@ -254,6 +260,28 @@ export function measureClip(
       mins.length,
       iqr(mins),
     );
+    // Frames for the report, from the cycle most typical of this rider:
+    // its extension and top-of-stroke flexion are closest to the medians.
+    {
+      const mid = (xs: number[]) => {
+        const target = median(xs);
+        let best = 0;
+        xs.forEach((x, n) => {
+          if (Math.abs(x - target) < Math.abs(xs[best] - target)) best = n;
+        });
+        return best;
+      };
+      const momentOf = (cycle: number, sign: 1 | -1) => {
+        let at = peaks[cycle];
+        for (let n = peaks[cycle]; n <= peaks[cycle + 1]; n++)
+          if (sign * flex[n] < sign * flex[at]) at = n;
+        return usable[at].timeMs;
+      };
+      keyframes.push(
+        { position: "extension", timeMs: momentOf(mid(mins), 1) },
+        { position: "top", timeMs: momentOf(mid(maxs), -1) },
+      );
+    }
     const bdc = peaks.slice(1).map((p) => flex[p]);
     add(
       "knee-bdc",
@@ -449,5 +477,7 @@ export function measureClip(
       iqr(shoulders),
     );
   }
-  return { metrics, quality };
+  return keyframes.length
+    ? { metrics, quality, keyframes }
+    : { metrics, quality };
 }

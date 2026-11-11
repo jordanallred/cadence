@@ -98,3 +98,31 @@ it("adds ankle, elbow and shoulder measurements when visible", () => {
   ])
     expect(ids).toContain(id);
 });
+const flexAt = (f: PoseFrame) => {
+  const [h, k, a] = [23, 25, 27].map((j) => f.points[j]);
+  const v1 = [(h.x - k.x) * W, (h.y - k.y) * H],
+    v2 = [(a.x - k.x) * W, (a.y - k.y) * H];
+  const inside =
+    (Math.acos(
+      (v1[0] * v2[0] + v1[1] * v2[1]) / Math.hypot(...v1) / Math.hypot(...v2),
+    ) *
+      180) /
+    Math.PI;
+  return 180 - inside;
+};
+it("picks report frames at full extension and at the top of the stroke", () => {
+  const { frames, truthMin } = rider({});
+  const { keyframes, metrics } = measureClip(frames, "left", W, H);
+  const at = (p: string) =>
+    frames.find(
+      (x) => x.timeMs === keyframes!.find((k) => k.position === p)!.timeMs,
+    )!;
+  // Sampled at 30 Hz, so within a frame of the true extremes.
+  expect(Math.abs(flexAt(at("extension")) - truthMin)).toBeLessThan(2);
+  const top = metrics.find((m) => m.id === "knee-max")!.value;
+  expect(Math.abs(flexAt(at("top")) - top)).toBeLessThan(2);
+});
+it("saves no report frames when a clip is rejected", () => {
+  const { frames } = rider({ seconds: 2 });
+  expect(measureClip(frames, "left", W, H).keyframes).toBeUndefined();
+});
