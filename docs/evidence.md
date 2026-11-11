@@ -22,4 +22,6 @@ Severity >=7, reported restrictions with discomfort, off-bike/persistent symptom
 
 The engine cannot measure pressure, forces, tissue tolerance, true 3D joint rotation, structural leg-length differences or medical cause. Front/rear projected excursions are descriptive. A blank or low-quality recording yields no measurement-based prescription. Comfortable riders are not forced to match normative angles.
 
+Cadence timing now refines each ankle maximum between its neighboring samples with a three-point parabola using actual frame timestamps. Boundary, monotonic and invalid samples fall back to their measured timestamp. This reduces frame-quantization error; it does not establish real-world accuracy. Tests cover multiple pedaling rates and nonuniform timestamps. Videos with a short edge below 480 pixels receive a resolution warning while retaining otherwise usable measurements; 480 is an engineering guidance threshold, not a validated clinical cutoff.
+
 Real-world evaluation needed: consented cycling clips in all views; varied lighting, clothing, frame rates, body proportions and disabilities; manual expert reference landmarks; repeated recordings; measurement errors and failure rates; blinded comparison of supported actions and referrals. Unit tests prove software behavior, not clinical accuracy or market superiority.

@@ -7,6 +7,7 @@ import type {
   KeyMoment,
 } from "../domain/types";
 import { angle, quantile, smoothSeries } from "./geometry";
+import { peakTime } from "./timing";
 export const joints: Record<string, number> = {
   leftShoulder: 11,
   rightShoulder: 12,
@@ -37,6 +38,7 @@ export const QUALITY = {
   minAnkleSpan: 0.025,
   optionalVisibility: 0.5,
   optionalShare: 0.7,
+  resolutionWarningShortEdge: 480,
 };
 const median = (v: number[]) => quantile(v, 0.5);
 /**
@@ -71,6 +73,12 @@ export function measureClip(
   const quality: QualityIssue[] = [],
     metrics: Metric[] = [];
   const keyframes: Omit<KeyMoment, "image">[] = [];
+  if (Math.min(w, h) < QUALITY.resolutionWarningShortEdge)
+    quality.push({
+      code: "resolution",
+      severity: "warning",
+      message: `This video is ${w} × ${h} pixels. Small joint-placement errors matter more at this resolution. Review the overlays carefully; use the original camera file rather than a compressed copy when available.`,
+    });
   const reject = (code: string, message: string) => ({
     metrics: [],
     quality: [...quality, { code, severity: "reject" as const, message }],
@@ -164,9 +172,11 @@ export function measureClip(
       "cycles",
       "Could not identify at least three complete pedal cycles. Use a steady 10–20 second recording.",
     );
+  const times = usable.map((f) => f.timeMs);
+  const refinedPeaks = peaks.map((p) => peakTime(times, ankles, p));
   const periods = peaks
     .slice(1)
-    .map((p, n) => usable[p].timeMs - usable[peaks[n]].timeMs);
+    .map((_, n) => refinedPeaks[n + 1] - refinedPeaks[n]);
   if (
     periods.some(
       (p) => p < QUALITY.minCyclePeriodMs || p > QUALITY.maxCyclePeriodMs,

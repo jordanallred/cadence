@@ -1,5 +1,14 @@
 import { it, expect } from "vitest";
 import { measureClip } from "../src/analysis/metrics";
+it("flags compressed portrait footage without discarding otherwise usable motion", () => {
+  const result = measureClip(syntheticFrames(), "front", 320, 568);
+  expect(
+    result.quality.some(
+      (q) => q.code === "resolution" && q.severity === "warning",
+    ),
+  ).toBe(true);
+  expect(result.metrics.length).toBeGreaterThan(0);
+});
 import type { PoseFrame } from "../src/domain/types";
 export function syntheticFrames(): PoseFrame[] {
   return Array.from({ length: 150 }, (_, n) => ({
