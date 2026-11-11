@@ -20,6 +20,7 @@ import { recommend } from "./fit/recommend";
 import { assessContext } from "./fit/assessment";
 import {
   saveSession,
+  DiskSaveError,
   loadSessions,
   deleteSession,
   mergeImported,
@@ -38,6 +39,7 @@ import {
 } from "./storage/portable";
 import { Notice } from "./components/Fields";
 const SAVE_FAILED = "Could not save locally.";
+const DISK_FAILED = "Saved in this browser, but not in the fit folder on disk.";
 const steps = [
   {
     title: "Your starting point",
@@ -108,9 +110,20 @@ export default function App() {
           ]);
           setSaveState(savedWhere());
           // A later good save means the earlier failure is over.
-          setError((e) => (e.startsWith(SAVE_FAILED) ? "" : e));
+          setError((e) =>
+            e.startsWith(SAVE_FAILED) || e.startsWith(DISK_FAILED) ? "" : e,
+          );
         })
         .catch((e) => {
+          if (e instanceof DiskSaveError) {
+            setSaveState("Saved in this browser");
+            setError(
+              DISK_FAILED +
+                " Other browsers and ports will show an older copy until it saves. Download a backup to be safe. " +
+                e.message,
+            );
+            return;
+          }
           setSaveState("Not saved");
           setError(SAVE_FAILED + " Download a backup now. " + String(e));
         });

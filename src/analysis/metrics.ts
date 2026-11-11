@@ -163,7 +163,11 @@ export function measureClip(
     // A real bottom of stroke follows the foot coming down. The edge of a
     // still stretch (rider waiting before pedaling) is flat, not a stroke.
     let low = ankles[n];
-    for (let k = n - 1; k >= 0 && usable[n].timeMs - usable[k].timeMs <= 400; k--)
+    for (
+      let k = n - 1;
+      k >= 0 && usable[n].timeMs - usable[k].timeMs <= 400;
+      k--
+    )
       low = Math.min(low, ankles[k]);
     if (ankles[n] - low < 0.25 * span) continue;
     const last = peaks.at(-1);

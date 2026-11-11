@@ -17,7 +17,12 @@ import (
 	"time"
 )
 
-const maxSessionBytes = 30 << 20
+// One fit can hold 40 clips of up to 30 s of pose frames at 30 Hz, a
+// second copy of the frames once tracking is corrected, and report stills:
+// about 150 MB, or 210 MB with the full-precision landmarks older versions
+// saved. The cap must cover that or the disk copy silently stops
+// updating (#8). Keep in step with MAX_FIT_BYTES in src/storage/portable.ts.
+const maxSessionBytes = 256 << 20
 
 var sessionID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,80}$`)
 

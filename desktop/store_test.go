@@ -92,3 +92,12 @@ func TestVideoRoundTrip(t *testing.T) {
 		t.Fatalf("after delete: %d", w.Code)
 	}
 }
+
+// A fit with many clips is far over the old 30 MB cap (#8).
+func TestStoreLargeFit(t *testing.T) {
+	s := openStoreAt(t, t.TempDir())
+	body := `{"id":"big","pad":"` + strings.Repeat("x", 120<<20) + `"}`
+	if w := storeReq(s, http.MethodPut, "/api/store/sessions/big", "application/json", body); w.Code != 204 {
+		t.Fatalf("120 MB fit should save, got %d %s", w.Code, w.Body)
+	}
+}
