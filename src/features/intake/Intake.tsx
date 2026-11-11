@@ -18,27 +18,16 @@ export function Intake({
     label: string,
     hint: string,
   ) => {
-    const length = key !== "saddleTilt",
-      factor = length && value.units === "imperial" ? 25.4 : 1;
+    const length = key !== "saddleTilt";
     return (
-      <Field
-        label={label + (length ? (factor === 1 ? " · mm" : " · in") : " · °")}
-        hint={hint}
-      >
+      <Field label={label + (length ? " · mm" : " · °")} hint={hint}>
         <input
           type="number"
           step="any"
           disabled={locked}
-          value={
-            value[key] === null
-              ? ""
-              : Math.round((value[key]! / factor) * 100) / 100
-          }
+          value={value[key] ?? ""}
           onChange={(e) =>
-            set(
-              key,
-              e.target.value === "" ? null : Number(e.target.value) * factor,
-            )
+            set(key, e.target.value === "" ? null : Number(e.target.value))
           }
           placeholder="Unknown"
         />
@@ -104,15 +93,6 @@ export function Intake({
               value={value.goal}
               onChange={(e) => set("goal", e.target.value)}
             />
-          </Field>
-          <Field label="Measurement units">
-            <select
-              value={value.units}
-              onChange={(e) => set("units", e.target.value as Profile["units"])}
-            >
-              <option value="metric">Metric</option>
-              <option value="imperial">Imperial</option>
-            </select>
           </Field>
         </div>
       </section>

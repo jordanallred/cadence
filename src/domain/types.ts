@@ -14,13 +14,12 @@ export const viewSchema = z.enum(["left", "right", "front", "rear"]);
 export type View = z.infer<typeof viewSchema>;
 export type Point = z.infer<typeof pointSchema>;
 export type PoseFrame = z.infer<typeof frameSchema>;
-export const intakeSchema = z.object({
+const intakeFields = z.object({
   name: z.string().max(120),
   bike: z.string().max(120),
   discipline: z.enum(["road", "gravel", "mountain", "stationary"]),
   goal: z.string().max(1000),
   experience: z.string().max(100),
-  units: z.enum(["metric", "imperial"]),
   saddleHeight: z.number().positive().max(1500).nullable(),
   saddleSetback: z.number().min(-200).max(400).nullable(),
   saddleTilt: z.number().min(-30).max(30).nullable(),
@@ -53,7 +52,24 @@ export const intakeSchema = z.object({
   mechanicalLimits: z.boolean(),
   notes: z.string().max(3000),
 });
-export type Intake = z.infer<typeof intakeSchema>;
+/**
+ * Cadence is metric-only: lengths in millimetres, angles in degrees.
+ * Older saved profiles carry a `units` field. Their numbers were already
+ * stored in millimetres (imperial only changed the input display), so the
+ * migration drops the field and rounds imperial-entered lengths to 0.1 mm to
+ * clear float noise from the old inch conversion.
+ */
+export function migrateIntake(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || !("units" in raw)) return raw;
+  const { units, ...rest } = raw as Record<string, unknown>;
+  if (units === "imperial")
+    for (const key of ["saddleHeight", "saddleSetback", "crankLength"])
+      if (typeof rest[key] === "number")
+        rest[key] = Math.round((rest[key] as number) * 10) / 10;
+  return rest;
+}
+export const intakeSchema = z.preprocess(migrateIntake, intakeFields);
+export type Intake = z.infer<typeof intakeFields>;
 export const metricSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -179,7 +195,6 @@ export const defaultIntake: Intake = {
   discipline: "road",
   goal: "Comfort on longer rides",
   experience: "Recreational",
-  units: "metric",
   saddleHeight: null,
   saddleSetback: null,
   saddleTilt: null,
