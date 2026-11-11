@@ -82,6 +82,11 @@ export function ShareWithFitter({
           onChange={(v) => set({ stills: v })}
         />
       </fieldset>
+      <p className="muted share-always">
+        Always included: your bike, goal and riding experience, setup
+        measurements, symptom ratings, ride dates and lengths, and how you
+        described each change.
+      </p>
       <div className="share-row">
         <button
           className="secondary"

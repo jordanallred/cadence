@@ -2509,6 +2509,10 @@ main:focus {
   padding: 0;
   margin-bottom: 8px;
 }
+.share-always {
+  font-size: 13px;
+  margin: -6px 0 16px;
+}
 .share-row {
   display: flex;
   flex-wrap: wrap;
