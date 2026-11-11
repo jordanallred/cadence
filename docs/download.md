@@ -31,10 +31,13 @@ Cadence on your computer, where it appears with a **Use this video** button.
 Everything stays on your computer. Videos are analyzed in your browser and
 nothing is uploaded. Fit history is saved as JSON files on your computer
 (Windows: `%AppData%\Cadence\sessions`, macOS: `~/Library/Application
-Support/Cadence/sessions`, Linux: `~/.config/Cadence/sessions`), so it is
-still there if you switch browsers or ports. Videos stay in the browser you
-used. **Back up all fits** at the bottom of any page saves everything to one
-file, and **Import backup** restores it.
+Support/Cadence/sessions`, Linux: `~/.config/Cadence/sessions`), and videos
+you choose to keep are saved next to it in `Cadence/videos`, so both are
+still there if you switch browsers or ports. Videos kept by an earlier
+version in the browser move to that folder the next time you open Cadence.
+At the bottom of any page, **Back up all fits** saves every fit to one JSON
+file, and **Back up fits and videos** saves every fit plus each kept video
+to one .zip. **Import backup** restores either.
 
 **First-run warnings.** The downloads are not code-signed yet.
 - Windows SmartScreen: choose **More info → Run anyway**.
