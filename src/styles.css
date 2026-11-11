@@ -1782,6 +1782,16 @@ dd {
   font-size: 12px;
   margin: 4px 0 14px;
 }
+.measure input[aria-invalid] {
+  border-color: #c98a6e;
+  background: #fffaf8;
+}
+.measure-problem {
+  margin: 8px 0 0;
+  color: #944930;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .measure .how {
   margin-top: 8px;
   font-size: 12px;

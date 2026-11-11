@@ -85,6 +85,19 @@ function Diagram() {
   );
 }
 
+/**
+ * Why a typed value cannot be used, or "" if it can. Exported for tests.
+ * A value a tenth of the range is almost always centimetres, so say so.
+ */
+export function rangeProblem(m: Measurement, n: number): string {
+  if (!Number.isFinite(n)) return "Enter a number.";
+  if (n >= m.min && n <= m.max) return "";
+  const range = `Enter ${m.min} to ${m.max} ${m.unit}.`;
+  if (m.unit === "mm" && n * 10 >= m.min && n * 10 <= m.max)
+    return `${range} If you measured ${n} cm, that is ${n * 10} mm.`;
+  return range;
+}
+
 function Input({
   m,
   value,
@@ -96,6 +109,21 @@ function Input({
   set: (v: number | null) => void;
   locked: boolean;
 }) {
+  // The typed text is kept here and only valid numbers reach the fit, so a
+  // half-typed "5" on the way to "500" is never saved.
+  const [draft, setDraft] = useState(value === null ? "" : String(value)),
+    [touched, setTouched] = useState(false);
+  const [shown, setShown] = useState(value);
+  if (value !== shown) {
+    // The fit changed from outside (another fit, an import): follow it.
+    setShown(value);
+    if (draft.trim() === "" ? value !== null : Number(draft) !== value) {
+      setDraft(value === null ? "" : String(value));
+      setTouched(false);
+    }
+  }
+  const problem = draft.trim() === "" ? "" : rangeProblem(m, Number(draft));
+  const errorId = `${m.key}-problem`;
   return (
     <div className="measure">
       <Field label={`${m.label} · ${m.unit}`} hint={m.hint}>
@@ -106,13 +134,24 @@ function Input({
           min={m.min}
           max={m.max}
           disabled={locked}
-          value={value ?? ""}
-          onChange={(e) =>
-            set(e.target.value === "" ? null : Number(e.target.value))
-          }
+          value={draft}
+          aria-invalid={touched && problem ? true : undefined}
+          aria-describedby={touched && problem ? errorId : undefined}
+          onChange={(e) => {
+            const text = e.target.value;
+            setDraft(text);
+            if (text.trim() === "") set(null);
+            else if (!rangeProblem(m, Number(text))) set(Number(text));
+          }}
+          onBlur={() => setTouched(true)}
           placeholder="Unknown"
         />
       </Field>
+      {touched && problem && (
+        <p className="measure-problem" id={errorId} role="alert">
+          Not saved. {problem}
+        </p>
+      )}
       <details className="how">
         <summary>How to measure</summary>
         <ol>
