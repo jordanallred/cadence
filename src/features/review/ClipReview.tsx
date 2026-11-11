@@ -91,10 +91,10 @@ export function ClipReview({
         <ArrowLeft size={17} /> All recordings
       </button>
       <div className="section-title">
-        <span className="eyebrow">
-          TRACKING REVIEW / {clip.view.toUpperCase()}
-        </span>
-        <h1>Check what we see.</h1>
+        <h1>
+          Check the tracking:{" "}
+          <span className="view-name">{clip.view} view</span>
+        </h1>
         <p>
           Follow the joints through the whole clip. A misplaced point changes
           the measurement.

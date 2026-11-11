@@ -8,9 +8,7 @@ import {
   Plus,
   Download,
   Upload,
-  ShieldCheck,
   Trash2,
-  ArrowUpRight,
 } from "lucide-react";
 import { newSession, type Session, type ClipAnalysis } from "./domain/types";
 import { Intake } from "./features/intake/Intake";
@@ -38,7 +36,7 @@ const steps = [
     icon: UserRound,
   },
   { title: "Recordings", sub: "Capture & review movement", icon: ScanLine },
-  { title: "Fit report", sub: "Understand the evidence", icon: ClipboardList },
+  { title: "Fit report", sub: "What to change first", icon: ClipboardList },
   { title: "Ride & refine", sub: "Changes & real-world feedback", icon: Route },
 ];
 export default function App() {
@@ -198,8 +196,7 @@ export default function App() {
       setError(String(e));
     }
   };
-  if (!session)
-    return <div className="loading">Opening your fitting workspace…</div>;
+  if (!session) return <div className="loading">Loading your fits…</div>;
   const selected = session.clips.find((c) => c.id === review),
     context = assessContext(session.intake, session.events),
     urgent = context.find((r) => r.urgency !== "routine");
@@ -219,7 +216,6 @@ export default function App() {
           </span>
           cadence<span className="brand-period">.</span>
         </a>
-        <div className="workspace-label">YOUR FITTING WORKSPACE</div>
         <nav aria-label="Fit steps">
           {steps.map((s, n) => (
             <button
@@ -232,12 +228,11 @@ export default function App() {
                 <strong>{s.title}</strong>
                 <small>{s.sub}</small>
               </span>
-              <span className="step-number">0{n + 1}</span>
             </button>
           ))}
         </nav>
         <div className="session-picker">
-          <label htmlFor="session">CURRENT FIT</label>
+          <label htmlFor="session">Current fit</label>
           <select
             id="session"
             value={session.id}
@@ -257,28 +252,17 @@ export default function App() {
             <Plus size={15} />
             Start a new fit
           </button>
-        </div>
-        <div className="sidebar-bottom">
-          <ShieldCheck size={23} />
-          <strong>Private by design.</strong>
-          <p>Your footage and fit history stay on this computer.</p>
-          <span>FREE & OPEN SOURCE</span>
+          <p
+            className={
+              "save-indicator" + (saveState === "Not saved" ? " bad" : "")
+            }
+            role="status"
+          >
+            {saveState}
+          </p>
         </div>
       </aside>
       <div className="main-shell">
-        <header className="topbar no-print">
-          <div className="breadcrumb">
-            Workspace <span>/</span> <strong>{steps[step].title}</strong>
-          </div>
-          <span className="save-indicator">
-            <span
-              className={
-                "status-dot " + (saveState === "Not saved" ? "bad" : "")
-              }
-            />
-            {saveState}
-          </span>
-        </header>
         <main>
           {error && (
             <div role="alert">
@@ -359,10 +343,6 @@ export default function App() {
             />
           )}
           <footer className="workspace-footer no-print">
-            <div>
-              <span className="wordmark">cadence.</span>
-              <p>Understand your position. Enjoy your ride.</p>
-            </div>
             <div className="footer-tools">
               <button
                 onClick={() =>
@@ -427,7 +407,7 @@ export default function App() {
             Browser data can be cleared by your browser or operating system.
             Keep a backup and your original videos.{" "}
             <a href="#policy" onClick={() => go(2)}>
-              Evidence & limitations <ArrowUpRight size={12} />
+              Evidence & limitations
             </a>
           </p>
           {step === 1 && selected && (

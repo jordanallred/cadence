@@ -6,12 +6,7 @@ import type {
   Metric,
   Point,
 } from "../../domain/types";
-import {
-  describeRange,
-  rangeText,
-  targetRange,
-  type TargetRange,
-} from "../../fit/ranges";
+import { describeRange, targetRange, type TargetRange } from "../../fit/ranges";
 
 type Vec = { x: number; y: number };
 type Angle = {
@@ -271,6 +266,43 @@ function MomentFigure({
   };
   const clamp = (v: number, lo: number, hi: number) =>
     Math.max(lo, Math.min(hi, v));
+  // Place each label outside its angle, then push apart any that overlap
+  // (shoulder and torso labels often land on top of each other).
+  const lineHeight = font * 1.6;
+  const labelled = angles.map((a) => {
+    const r = size * 0.045;
+    const u = unit(a.from),
+      v = unit(a.to);
+    const mid = unit({ x: u.x + v.x, y: u.y + v.y });
+    const reach = r + font * 1.9;
+    const text = `${a.name} ${Math.round(a.value)}°`;
+    return {
+      a,
+      r,
+      p: { x: a.at.x + u.x * r, y: a.at.y + u.y * r },
+      q: { x: a.at.x + v.x * r, y: a.at.y + v.y * r },
+      sweep: u.x * v.y - u.y * v.x > 0 ? 1 : 0,
+      x: a.at.x + mid.x * reach,
+      y: a.at.y + mid.y * reach,
+      half: (text.length * font * 0.58) / 2,
+    };
+  });
+  for (let pass = 0; pass < 6; pass++)
+    for (let i = 0; i < labelled.length; i++)
+      for (let j = i + 1; j < labelled.length; j++) {
+        const A = labelled[i],
+          B = labelled[j];
+        const overlapX = A.half + B.half - Math.abs(A.x - B.x),
+          overlapY = lineHeight - Math.abs(A.y - B.y);
+        if (overlapX <= 0 || overlapY <= 0) continue;
+        const dir = B.y >= A.y ? 1 : -1;
+        A.y -= (dir * overlapY) / 2;
+        B.y += (dir * overlapY) / 2;
+      }
+  for (const l of labelled) {
+    l.x = clamp(l.x, l.half + font * 0.3, W - l.half - font * 0.3);
+    l.y = clamp(l.y, font, H - font);
+  }
   const description = angles
     .map((a) => `${a.name} ${Math.round(a.value)} degrees`)
     .join(", ");
@@ -313,37 +345,25 @@ function MomentFigure({
             </g>
           );
         })}
-        {angles.map((a) => {
-          const r = size * 0.045;
-          const u = unit(a.from),
-            v = unit(a.to);
-          const p = { x: a.at.x + u.x * r, y: a.at.y + u.y * r },
-            q = { x: a.at.x + v.x * r, y: a.at.y + v.y * r };
-          const sweep = u.x * v.y - u.y * v.x > 0 ? 1 : 0;
-          const mid = unit({ x: u.x + v.x, y: u.y + v.y });
-          const reach = r + font * 1.9;
-          const lx = clamp(a.at.x + mid.x * reach, font * 3, W - font * 3),
-            ly = clamp(a.at.y + mid.y * reach, font, H - font);
-          return (
-            <g key={a.name}>
-              <path
-                d={`M ${p.x} ${p.y} A ${r} ${r} 0 0 ${sweep} ${q.x} ${q.y}`}
-                className="arc"
-                strokeWidth={stroke * 1.4}
-              />
-              <text
-                x={lx}
-                y={ly}
-                fontSize={font}
-                className="angle-label"
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >
-                {a.name} {Math.round(a.value)}°
-              </text>
-            </g>
-          );
-        })}
+        {labelled.map(({ a, p, q, r, sweep, x, y }) => (
+          <g key={a.name}>
+            <path
+              d={`M ${p.x} ${p.y} A ${r} ${r} 0 0 ${sweep} ${q.x} ${q.y}`}
+              className="arc"
+              strokeWidth={stroke * 1.4}
+            />
+            <text
+              x={x}
+              y={y}
+              fontSize={font}
+              className="angle-label"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {a.name} {Math.round(a.value)}°
+            </text>
+          </g>
+        ))}
         {[hip, knee, ankle, shoulder, elbow, wrist].map(
           (p, n) =>
             p && (
