@@ -28,8 +28,16 @@ import {
   savedWhere,
   saveVideo,
   deleteVideo,
+  loadVideo,
+  hasVideo,
+  diskFolder,
 } from "./storage/db";
-import { parseBackup, exportSession, exportAll } from "./storage/portable";
+import {
+  readBackupFile,
+  exportSession,
+  exportAll,
+  exportAllWithVideos,
+} from "./storage/portable";
 import { Notice } from "./components/Fields";
 const steps = [
   {
@@ -154,12 +162,21 @@ export default function App() {
   const importBackup = async (file?: File) => {
     if (!file) return;
     try {
-      const backup = parseBackup(await file.text());
+      const backup = await readBackupFile(file);
       await persistNow();
       if (backup.all) {
         // A full backup restores fits as they were, keeping their ids, so
         // restoring twice does not duplicate anything.
         await mergeImported(backup.sessions);
+        const failed: string[] = [];
+        for (const [id, video] of backup.videos)
+          if (!(await hasVideo(id)))
+            await saveVideo(id, video).catch(() => failed.push(video.name));
+        if (failed.length)
+          throw Error(
+            "Fits were restored, but these videos could not be saved: " +
+              failed.join(", "),
+          );
         const list = await loadSessions();
         setSessions(list);
         setSession(list[0] ?? newSession());
@@ -356,6 +373,7 @@ export default function App() {
               results={results}
               onChange={update}
               onRecord={() => go(1)}
+              onReport={() => go(2)}
             />
           )}
           <footer className="workspace-footer no-print">
@@ -389,12 +407,38 @@ export default function App() {
                 <Download size={14} />
                 Back up all fits
               </button>
+              <button
+                title="One .zip file with every fit and each kept video"
+                onClick={async () => {
+                  try {
+                    await persistNow();
+                    await exportAllWithVideos(
+                      sessions.some((s) => s.id === session.id)
+                        ? sessions.map((s) =>
+                            s.id === session.id
+                              ? { ...session, recommendations: results }
+                              : s,
+                          )
+                        : [
+                            { ...session, recommendations: results },
+                            ...sessions,
+                          ],
+                      loadVideo,
+                    );
+                  } catch (e) {
+                    setError("Backup failed. " + String(e));
+                  }
+                }}
+              >
+                <Download size={14} />
+                Back up fits and videos
+              </button>
               <label>
                 <Upload size={14} />
                 Import backup
                 <input
                   type="file"
-                  accept=".json"
+                  accept=".json,.zip"
                   onChange={(e) => {
                     void importBackup(e.target.files?.[0]);
                     e.target.value = "";
@@ -410,7 +454,8 @@ export default function App() {
           {deletePending && (
             <Notice tone="warning">
               <span>
-                Delete this fit and its stored videos from this browser?
+                Delete this fit and its kept videos from{" "}
+                {diskFolder ? "this computer" : "this browser"}?
               </span>
               <button className="danger-button" onClick={() => void remove()}>
                 Delete this fit
@@ -424,8 +469,9 @@ export default function App() {
             </Notice>
           )}
           <p className="storage-note no-print">
-            Browser data can be cleared by your browser or operating system.
-            Keep a backup and your original videos.{" "}
+            {diskFolder
+              ? `Fits and kept videos are saved in ${diskFolder.replace(/[\\/]sessions$/, "")}. Keep a backup and your original videos too.`
+              : "Browser data can be cleared by your browser or operating system. Keep a backup and your original videos."}{" "}
             <a href="#policy" onClick={() => go(2)}>
               Evidence & limitations <ArrowUpRight size={12} />
             </a>

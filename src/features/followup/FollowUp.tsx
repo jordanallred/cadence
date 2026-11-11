@@ -3,17 +3,26 @@ import { RotateCcw, Check, Plus } from "lucide-react";
 import type { Session, FitEvent, Recommendation } from "../../domain/types";
 import { activeExperiment, appendEvent } from "../../fit/history";
 import { Field, Notice } from "../../components/Fields";
+import {
+  compareSetups,
+  describeChange,
+  headline,
+  headlineText,
+  revisionAfter,
+} from "../../fit/compare";
 import { loggedSettings, measurement } from "../../fit/measurements";
 export function FollowUp({
   session,
   onChange,
   results,
   onRecord,
+  onReport,
 }: {
   session: Session;
   onChange: (s: Session) => void;
   results: Recommendation[];
   onRecord: () => void;
+  onReport: () => void;
 }) {
   const [setting, setSetting] =
       useState<NonNullable<FitEvent["setting"]>>("saddleHeight"),
@@ -30,6 +39,15 @@ export function FollowUp({
       (r) => r.outcome === "assessment" || r.id === "screen",
     ),
     experiment = results.find((r) => r.outcome === "experiment");
+  const revisions = revisionAfter(session);
+  /** What the next recording showed after a change, in one line. */
+  const result = (e: FitEvent) => {
+    const rev = revisions.get(e.id);
+    const cmp = rev === undefined ? undefined : compareSetups(session, rev);
+    const top = cmp && headline(cmp.metrics);
+    return top ? headlineText(top) : undefined;
+  };
+  const activeResult = active && result(active);
   const add = (e: Omit<FitEvent, "id" | "at">) => {
     try {
       onChange(
@@ -118,9 +136,18 @@ export function FollowUp({
                   Keep improvement
                 </button>
               </div>
-              <button className="text-button" onClick={onRecord}>
-                Record your updated position →
-              </button>
+              {activeResult ? (
+                <p className="compare-summary">
+                  {activeResult}{" "}
+                  <button className="text-button" onClick={onReport}>
+                    See before and after
+                  </button>
+                </p>
+              ) : (
+                <button className="text-button" onClick={onRecord}>
+                  Record your updated position →
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -321,10 +348,14 @@ export function FollowUp({
                       Comfort {e.comfort}/10 · {e.detail}
                     </p>
                   )}
-                  {e.kind === "adjustment" && (
+                  {(e.kind === "adjustment" || e.kind === "revert") && (
                     <small>
-                      Before {e.before ?? "unknown"} · After{" "}
-                      {e.after ?? "see notes"}
+                      {(e.kind === "revert" ||
+                        (e.setting && e.setting !== "other")) &&
+                        describeChange(e, session)}
+                      {result(e) && (
+                        <span className="compare-result">{result(e)}</span>
+                      )}
                     </small>
                   )}
                 </div>

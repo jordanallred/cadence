@@ -10,6 +10,7 @@ import { evidence } from "../../fit/evidence";
 import { exportSession } from "../../storage/portable";
 import { Notice } from "../../components/Fields";
 import { PositionReport, positionMetrics } from "./Visuals";
+import { Comparison } from "./Comparison";
 import { FitNumbers } from "./FitNumbers";
 /** The headline number, naming what moves: "Saddle 5–29 mm back". */
 export function estimateText(e: NonNullable<Recommendation["estimate"]>) {
@@ -95,6 +96,7 @@ export function Report({
           </div>
         ))}
       </div>
+      <Comparison session={session} />
       {side && <PositionReport clip={side} intake={session.intake} />}
       <FitNumbers intake={session.intake} results={results} side={side} />
       <div className="report-grid">
