@@ -65,7 +65,9 @@ export function nextStep(
         stage: "decide",
         title: "This change made riding worse",
         detail:
-          "Put the setting back and log the revert. Cadence will not suggest it again.",
+          active.setting && active.setting !== "other" && active.before != null
+            ? "Put the setting back and log the revert. Cadence will not suggest this change again."
+            : "Put the setting back the way it was and log the revert, describing how you restored it.",
         action: "Revert the change",
         place: "refine",
       };

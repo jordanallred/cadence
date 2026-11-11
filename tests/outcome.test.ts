@@ -272,3 +272,31 @@ it("writes an all-day calendar reminder", () => {
   expect(ics.split("\r\n")[0]).toBe("BEGIN:VCALENDAR");
   expect(dayFromNow(7, new Date(2026, 10, 28))).toBe("2026-12-05");
 });
+
+describe("a change rated worse", () => {
+  it("is avoided and offered as an undo, like a worse ride", async () => {
+    const { recommend } = await import("../src/fit/recommend");
+    const s = ride(change(base()), "same", 9);
+    expect(outcomeOf(s, active(s)).verdict).toBe("worse");
+    const undo = recommend(s.intake, s.clips, s.events).find(
+      (r) => r.id === "undo",
+    );
+    expect(undo?.observations).toMatch(/symptom you rated got worse/);
+    expect(nextStep(s, []).detail).toMatch(
+      /will not suggest this change again/,
+    );
+  });
+
+  it("makes no promise for a change with no measured setting", () => {
+    const s0 = base();
+    const s1 = add(s0, {
+      kind: "adjustment",
+      detail: "New saddle",
+      setting: "other",
+      before: null,
+      after: null,
+    });
+    const s = ride(s1, "worse");
+    expect(nextStep(s, []).detail).not.toMatch(/suggest/);
+  });
+});

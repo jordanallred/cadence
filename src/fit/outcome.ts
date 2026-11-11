@@ -1,4 +1,4 @@
-import type { FitEvent, Session, SymptomRating } from "../domain/types";
+import type { FitEvent, Session } from "../domain/types";
 import {
   compareSetups,
   headline,
@@ -7,6 +7,12 @@ import {
   type MetricChange,
 } from "./compare";
 import { symptomName } from "./symptoms";
+import {
+  RATING_STEP,
+  ratingChanges,
+  latestRatings as latest,
+  ratingsBefore as before,
+} from "./ratings";
 
 /**
  * Did one change help? Comfort is the outcome: the rider's own symptom
@@ -21,8 +27,7 @@ export type Verdict =
 
 /** Rides needed before a change that did not make things worse is judged. */
 export const MIN_RIDES = 2;
-/** A rating change this size or larger, out of 10, counts as real. */
-export const RATING_STEP = 2;
+export { RATING_STEP };
 
 export type SymptomChange = {
   name: string;
@@ -51,44 +56,13 @@ const TITLE: Record<Verdict, string> = {
   "too-early": "Too early to tell",
 };
 
-const key = (r: { area: string; side: string }) => `${r.area}:${r.side}`;
-
 /** The ratings that applied just before a change. */
-export function ratingsBefore(
-  session: Session,
-  change: FitEvent,
-): SymptomRating[] {
-  if (change.symptoms) return change.symptoms;
-  // Older changes have no snapshot: the latest rated ride before it, then
-  // the symptoms from Your starting point.
-  const at = session.events.indexOf(change);
-  const ride = session.events
-    .slice(0, at < 0 ? session.events.length : at)
-    .reverse()
-    .find((e) => e.kind === "ride" && e.symptoms?.length);
-  return (
-    ride?.symptoms ??
-    session.intake.symptoms.map(({ area, side, severity }) => ({
-      area,
-      side,
-      severity,
-    }))
-  );
-}
+export const ratingsBefore = (session: Session, change: FitEvent) =>
+  before(session.events, session.intake, change);
 
 /** The ratings to start a new ride form from: the most recent ones. */
-export function latestRatings(session: Session): SymptomRating[] {
-  const current = session.intake.symptoms;
-  const last = [...session.events]
-    .reverse()
-    .find((e) => e.symptoms?.length)?.symptoms;
-  return current.map(({ area, side, severity }) => ({
-    area,
-    side,
-    severity:
-      last?.find((r) => key(r) === key({ area, side }))?.severity ?? severity,
-  }));
-}
+export const latestRatings = (session: Session) =>
+  latest(session.events, session.intake);
 
 export function outcomeOf(session: Session, change: FitEvent): Outcome {
   const rides = session.events.filter(
@@ -103,26 +77,17 @@ export function outcomeOf(session: Session, change: FitEvent): Outcome {
     worse: count("worse"),
   };
 
-  const before = ratingsBefore(session, change);
-  const lastRated = [...rides].reverse().find((e) => e.symptoms?.length);
-  const symptoms: SymptomChange[] = lastRated
-    ? before.flatMap((b) => {
-        const a = lastRated.symptoms!.find((r) => key(r) === key(b));
-        if (!a) return [];
-        return [
-          {
-            name: symptomName({
-              ...b,
-              severity: Math.max(1, b.severity),
-              warning: false,
-            }),
-            before: b.severity,
-            after: a.severity,
-            delta: a.severity - b.severity,
-          },
-        ];
-      })
-    : [];
+  const symptoms: SymptomChange[] = ratingChanges(
+    session.events,
+    session.intake,
+    change,
+  ).map((c) => ({
+    name: symptomName({ ...c.rating, severity: 1, warning: false }),
+    before: c.before,
+    after: c.after,
+    delta: c.after - c.before,
+  }));
+  const hadRatings = ratingsBefore(session, change).length > 0;
 
   const video = videoAfter(session, change);
 
@@ -203,7 +168,7 @@ export function outcomeOf(session: Session, change: FitEvent): Outcome {
     reasons.push(rideLine());
   }
 
-  if (rides.length && !symptoms.length && before.length)
+  if (rides.length && !symptoms.length && hadRatings)
     reasons.push(
       "Rate your symptoms on the next ride to compare them with before the change.",
     );
