@@ -22,7 +22,8 @@ self.onmessage = async (e: MessageEvent) => {
           delegate: "CPU",
         },
         runningMode: "VIDEO",
-        numPoses: 2,
+        // Room for the rider plus a poster, TV or someone walking past.
+        numPoses: 3,
         minPoseDetectionConfidence: 0.6,
         minPosePresenceConfidence: 0.6,
         minTrackingConfidence: 0.6,
@@ -33,17 +34,21 @@ self.onmessage = async (e: MessageEvent) => {
       return;
     }
     const r = model.detectForVideo(bitmap, timeMs);
+    // Every pose goes back; the main thread picks the rider (selectRider).
+    // Rounded: 0.0001 of the frame is far below tracking error, and it keeps
+    // saved fits several times smaller.
+    const round = (v: number, d: number) => Math.round(v * d) / d;
     self.postMessage({
       id,
       frame: {
         timeMs,
-        people: r.landmarks.length,
-        points:
-          r.landmarks[0]?.map((p) => ({
-            x: p.x,
-            y: p.y,
-            visibility: p.visibility ?? 0,
-          })) ?? [],
+        poses: r.landmarks.map((pose) =>
+          pose.map((p) => ({
+            x: round(p.x, 1e4),
+            y: round(p.y, 1e4),
+            visibility: round(p.visibility ?? 0, 1e3),
+          })),
+        ),
       },
     });
   } catch (error) {

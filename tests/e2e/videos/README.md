@@ -11,6 +11,9 @@ Real pedaling footage for `npm run e2e`.
   the pose model.
 - `side-trainer-late-start.mp4`: the same clip with its first frame held
   for 6 s, standing in for a rider who waits before pedaling.
+- `side-trainer-cutout.mp4`: the uncropped original (452×254), with the
+  life-size cardboard cutout of a person behind the bike. Re-encoded only.
+  Cadence must follow the rider and ignore the cutout.
 
 Add more riders here (side, front and rear views, different bikes and
 lighting), each with independently measured reference values.

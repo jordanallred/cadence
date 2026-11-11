@@ -21,6 +21,11 @@ export interface Segment {
  * windows win (up to `maxLength`), then steadier ones. The ankle must also
  * move periodically (pedaling repeats every 0.4–2.5 s), which random leg
  * movement does not.
+ *
+ * A 2-second slice that is mostly still but ends in a stroke has the full
+ * range, so the chosen window is then tightened to where the ankle actually
+ * starts and stops moving: a rider who sits still before pedaling (as
+ * hands-free recording produces) is left out.
  */
 export function pickSegment(
   frames: PoseFrame[],
@@ -36,8 +41,9 @@ export function pickSegment(
       ? [11 + off, 23 + off, 25 + off, 27 + off]
       : [23, 24, 25, 26, 27, 28];
   const ankle = 27 + off;
+  // Frames hold only the rider's pose (see selectRider), so other people
+  // in the shot do not matter here.
   const visible = (f: PoseFrame) =>
-    f.people === 1 &&
     required.every((j) => (f.points[j]?.visibility ?? 0) >= 0.5);
   const within = (a: number, b: number) =>
     frames.filter((f) => f.timeMs >= a * 1000 && f.timeMs < b * 1000);
@@ -79,12 +85,65 @@ export function pickSegment(
           ranges.reduce((a, b) => a + (b - mean) ** 2, 0) / ranges.length,
         ) / mean;
       const score = vis - cv;
-      if (!best || score > best.score)
-        best = { start: s, end: Math.min(duration, s + length), score };
+      const at = win.filter(visible).map((f) => f.timeMs / 1000);
+      const moving = motionBounds(at, ys);
+      // Pedaling from the first to the last sample keeps the whole window.
+      const start = moving.start > at[0] ? moving.start : s,
+        end = Math.min(
+          duration,
+          moving.end < at[at.length - 1] ? moving.end : s + length,
+        );
+      if (end - start < minLength - 0.5) continue;
+      if (!best || score > best.score) best = { start, end, score };
     }
     if (best) return { start: best.start, end: best.end };
   }
   return null;
+}
+
+/**
+ * Where the ankle starts and stops moving, in seconds. Leading and trailing
+ * stillness is cut down to the last still sample before the first stroke
+ * (and the first one after the last), so a window starts at the motion.
+ */
+export function motionBounds(
+  times: number[],
+  ys: number[],
+): { start: number; end: number } {
+  const n = ys.length;
+  const span = quantile(ys, 0.95) - quantile(ys, 0.05);
+  if (n < 2 || span <= 0) return { start: times[0] ?? 0, end: times.at(-1) ?? 0 };
+  const rangeOf = (from: number, to: number) => {
+    let lo = Infinity,
+      hi = -Infinity;
+    for (let k = 0; k < n; k++)
+      if (times[k] >= from && times[k] <= to) {
+        lo = Math.min(lo, ys[k]);
+        hi = Math.max(hi, ys[k]);
+      }
+    return hi - lo;
+  };
+  // First sample with a full stroke in the next second, then the first
+  // sample within that second that leaves its resting position.
+  let start = times[0];
+  for (let i = 0; i < n; i++) {
+    if (rangeOf(times[i], times[i] + 1) < 0.5 * span) continue;
+    let j = i + 1;
+    while (j < n && times[j] <= times[i] + 1 && Math.abs(ys[j] - ys[i]) <= 0.15 * span)
+      j++;
+    start = times[Math.min(j, n - 1) - 1];
+    break;
+  }
+  let end = times[n - 1];
+  for (let i = n - 1; i >= 0; i--) {
+    if (rangeOf(times[i] - 1, times[i]) < 0.5 * span) continue;
+    let j = i - 1;
+    while (j >= 0 && times[j] >= times[i] - 1 && Math.abs(ys[j] - ys[i]) <= 0.15 * span)
+      j--;
+    end = times[Math.max(j, 0) + 1];
+    break;
+  }
+  return end > start ? { start, end } : { start: times[0], end: times[n - 1] };
 }
 
 /** Highest autocorrelation for lags of 0.4–2.5 s: near 1 for pedaling. */

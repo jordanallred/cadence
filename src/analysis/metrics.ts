@@ -8,6 +8,7 @@ import type {
 } from "../domain/types";
 import { angle, quantile, smoothSeries } from "./geometry";
 import { peakTime } from "./timing";
+import { othersShare } from "./rider";
 export const joints: Record<string, number> = {
   leftShoulder: 11,
   rightShoulder: 12,
@@ -96,11 +97,15 @@ export function measureClip(
       "timestamps",
       "Frame timestamps are not increasing. Reimport the original video.",
     );
-  if (frames.some((f) => f.people > 1))
-    return reject(
-      "people",
-      "More than one person was detected. Record only the rider.",
-    );
+  // Frames hold only the rider's pose (selectRider), so someone else in the
+  // shot is a note, not a failure.
+  if (othersShare(frames) > 0.05)
+    quality.push({
+      code: "people",
+      severity: "warning",
+      message:
+        "Someone else, or a picture of a person, was in the shot. Cadence followed the rider; check that the tracing stays on the rider.",
+    });
   const side = view === "left" || view === "right",
     off = view === "right" ? 1 : 0;
   const required = side
@@ -113,9 +118,7 @@ export function measureClip(
     p.x < 0.99 &&
     p.y > 0.01 &&
     p.y < 0.99;
-  const usable = frames.filter(
-    (f) => f.people === 1 && required.every((j) => ok(f.points[j])),
-  );
+  const usable = frames.filter((f) => required.every((j) => ok(f.points[j])));
   if (usable.length / frames.length < QUALITY.minUsableShare)
     return reject(
       "visibility",
@@ -157,6 +160,12 @@ export function measureClip(
   for (let n = 1; n < ankles.length - 1; n++) {
     if (!(ankles[n] >= ankles[n - 1] && ankles[n] > ankles[n + 1])) continue;
     if (ankles[n] <= high) continue;
+    // A real bottom of stroke follows the foot coming down. The edge of a
+    // still stretch (rider waiting before pedaling) is flat, not a stroke.
+    let low = ankles[n];
+    for (let k = n - 1; k >= 0 && usable[n].timeMs - usable[k].timeMs <= 400; k--)
+      low = Math.min(low, ankles[k]);
+    if (ankles[n] - low < 0.25 * span) continue;
     const last = peaks.at(-1);
     if (
       last !== undefined &&
