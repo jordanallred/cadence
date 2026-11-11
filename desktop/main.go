@@ -45,6 +45,7 @@ const (
 	// sessions, every time the app starts.
 	defaultPort = 5180
 	healthPath  = "/__cadence"
+	quitPath    = "/__cadence/quit"
 )
 
 func main() {
@@ -79,14 +80,22 @@ func run(port int, openBrowser, phone bool, lanIP string) error {
 	url := "http://" + addr + "/"
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
-		if alreadyRunning(url) {
+		running, ok := runningVersion(url)
+		if !ok {
+			return fmt.Errorf("port %d is in use by another program; try --port %d (fit history is kept either way)", port, port+1)
+		}
+		if running == version {
 			fmt.Println("Cadence is already running. Opening it in your browser.")
 			if openBrowser {
 				return browse(url)
 			}
 			return nil
 		}
-		return fmt.Errorf("port %d is in use by another program; try --port %d (fit history is kept either way)", port, port+1)
+		// A different version holds the port. Opening it would show the
+		// old app, so replace it.
+		if ln, err = replaceRunning(url, addr, running); err != nil {
+			return err
+		}
 	}
 	link := &phoneLink{err: "Phone link is turned off (--no-phone)."}
 	if phone {
@@ -143,7 +152,22 @@ func handler(site fs.FS, modelPath string, link *phoneLink, st *store, port int)
 		}
 		switch r.URL.Path {
 		case healthPath:
-			fmt.Fprint(w, "cadence")
+			fmt.Fprint(w, "cadence "+version)
+			return
+		case quitPath:
+			// A custom header means a web page cannot send this without a
+			// CORS preflight, which this server never approves.
+			if r.Method != http.MethodPost || r.Header.Get("X-Cadence") != "quit" {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+			fmt.Println("A newer Cadence was started. Closing this one.")
+			go func() {
+				time.Sleep(200 * time.Millisecond)
+				link.cleanup()
+				os.Exit(0)
+			}()
 			return
 		case "/models/pose.task":
 			w.Header().Set("Cache-Control", "no-cache")
@@ -227,15 +251,54 @@ func verify(file string) (bool, error) {
 	return hex.EncodeToString(hash.Sum(nil)) == modelSHA256, nil
 }
 
-func alreadyRunning(url string) bool {
+// runningVersion reports whether Cadence answers at url, and which version.
+// Versions before 0.6.0 answer only "cadence", so their version is "".
+func runningVersion(url string) (string, bool) {
 	client := &http.Client{Timeout: time.Second}
 	resp, err := client.Get(url + strings.TrimPrefix(healthPath, "/"))
 	if err != nil {
-		return false
+		return "", false
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 16))
-	return string(body) == "cadence"
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64))
+	name, ver, _ := strings.Cut(string(body), " ")
+	if name != "cadence" {
+		return "", false
+	}
+	return ver, true
+}
+
+// replaceRunning asks another running Cadence to close, then takes over its
+// address. Versions before 0.6.0 cannot be asked, so the rider is told to
+// close that window and this one waits for the address to free up.
+func replaceRunning(url, addr, running string) (net.Listener, error) {
+	if running == "" {
+		fmt.Printf("An older Cadence is still running. Replacing it with %s.\n", version)
+	} else {
+		fmt.Printf("Cadence %s is still running. Replacing it with %s.\n", running, version)
+	}
+	req, _ := http.NewRequest(http.MethodPost, url+strings.TrimPrefix(quitPath, "/"), nil)
+	req.Header.Set("X-Cadence", "quit")
+	asked := false
+	if resp, err := (&http.Client{Timeout: 2 * time.Second}).Do(req); err == nil {
+		resp.Body.Close()
+		asked = resp.StatusCode == http.StatusNoContent
+	}
+	warned := false
+	for start := time.Now(); ; time.Sleep(300 * time.Millisecond) {
+		if ln, err := net.Listen("tcp", addr); err == nil {
+			if warned {
+				fmt.Println("The older Cadence has closed. Starting.")
+			}
+			return ln, nil
+		}
+		if !warned && (!asked || time.Since(start) > 5*time.Second) {
+			fmt.Println()
+			fmt.Println("Close the window of the older Cadence (or press Ctrl+C in it).")
+			fmt.Println("This one starts as soon as you do.")
+			warned = true
+		}
+	}
 }
 
 func browse(url string) error {

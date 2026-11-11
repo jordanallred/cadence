@@ -36,6 +36,8 @@ still there if you switch browsers or ports. Videos stay in the browser you
 used. **Back up all fits** at the bottom of any page saves everything to one
 file, and **Import backup** restores it.
 
+**Updating.** Start the new version. If an older Cadence is still open, the new one replaces it; versions before 0.6.0 cannot be closed automatically, so close that window when asked.
+
 **First-run warnings.** The downloads are not code-signed yet.
 - Windows SmartScreen: choose **More info → Run anyway**.
 - macOS: right-click the file, choose **Open**, then **Open** again. If macOS
