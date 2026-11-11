@@ -33,7 +33,7 @@ After `npm run build:desktop`, run `npm run e2e` to analyze real pedaling videos
 3. Review overlays throughout each recording. Correct an isolated joint or re-record widespread tracking problems. Corrections retain original landmarks.
 4. Read the ranked report: saddle height first (with a millimetre estimate when your saddle height is in your profile), then reach and drop, then knee tracking. The engine may also advise no change, more information or professional assessment.
 5. Log one measured change, re-record and add ride feedback. Keep an improvement or revert; the baseline and event history remain intact.
-6. Back up one fit or all fits as JSON, or print the report. Original videos are not in JSON backups. Retention in browser storage is optional; retain originals separately.
+6. Back up one fit or all fits as JSON, or every fit with its kept videos as a .zip, or print the report. Keeping a video is optional; the desktop app saves kept videos in its `Cadence/videos` folder (the dev server keeps them in the browser). Keep your originals separately too.
 
 ## Honest boundaries
 
@@ -45,6 +45,6 @@ Browser storage may be cleared or run out of space. Save backups. Records contai
 
 ## Source layout
 
-`src/analysis`: pose worker and geometry; `src/video`: decoding/sampling; `src/fit`: versioned context/recommendation/history logic; `src/storage`: validated backups and IndexedDB; `src/features`: complete UI workflow. The evidence register labels product heuristics separately from research.
+`src/analysis`: pose worker and geometry; `src/video`: decoding/sampling; `src/fit`: versioned context/recommendation/history logic; `src/storage`: validated backups, IndexedDB and the desktop app's disk store; `src/features`: complete UI workflow. The evidence register labels product heuristics separately from research.
 
 Original application code is MIT licensed. Dependencies retain their licenses. Model weights are never included in Git or release downloads: the source setup and the launcher both fetch them from Google's MediaPipe storage and verify the SHA-256. No public hosting or publication has been performed.

@@ -3,16 +3,26 @@ import { RotateCcw, Check, Plus } from "lucide-react";
 import type { Session, FitEvent, Recommendation } from "../../domain/types";
 import { activeExperiment, appendEvent } from "../../fit/history";
 import { Field, Notice } from "../../components/Fields";
+import {
+  compareSetups,
+  describeChange,
+  headline,
+  headlineText,
+  revisionAfter,
+} from "../../fit/compare";
+import { loggedSettings, measurement } from "../../fit/measurements";
 export function FollowUp({
   session,
   onChange,
   results,
   onRecord,
+  onReport,
 }: {
   session: Session;
   onChange: (s: Session) => void;
   results: Recommendation[];
   onRecord: () => void;
+  onReport: () => void;
 }) {
   const [setting, setSetting] =
       useState<NonNullable<FitEvent["setting"]>>("saddleHeight"),
@@ -29,6 +39,15 @@ export function FollowUp({
       (r) => r.outcome === "assessment" || r.id === "screen",
     ),
     experiment = results.find((r) => r.outcome === "experiment");
+  const revisions = revisionAfter(session);
+  /** What the next recording showed after a change, in one line. */
+  const result = (e: FitEvent) => {
+    const rev = revisions.get(e.id);
+    const cmp = rev === undefined ? undefined : compareSetups(session, rev);
+    const top = cmp && headline(cmp.metrics);
+    return top ? headlineText(top) : undefined;
+  };
+  const activeResult = active && result(active);
   const add = (e: Omit<FitEvent, "id" | "at">) => {
     try {
       onChange(
@@ -48,9 +67,11 @@ export function FollowUp({
   return (
     <>
       <div className="section-title">
-        <span className="eyebrow">04 / KEEP WHAT WORKS</span>
-        <h1>The ride is the test.</h1>
-        <p>Measure a change. Ride with it. Listen to your body.</p>
+        <h1>Ride & refine</h1>
+        <p>
+          Make one change, ride with it, then record how it felt. Keep it only
+          if riding is better.
+        </p>
       </div>
       {error && <Notice tone="warning">{error}</Notice>}
       {blocked && (
@@ -64,16 +85,15 @@ export function FollowUp({
         <section className="panel">
           <div className="panel-heading">
             <h2>{active ? "Your active experiment" : "Log an adjustment"}</h2>
-            <span>One at a time</span>
           </div>
           {active ? (
             <>
               <div className="active-experiment">
-                <span className="eyebrow">IN PROGRESS</span>
+                <span className="eyebrow">In progress</span>
                 <h3>{active.detail}</h3>
                 <p>
-                  {active.setting !== "other"
-                    ? `${active.before ?? "Unknown"} → ${active.after ?? "Unknown"} ${active.setting === "saddleTilt" ? "°" : "mm"}`
+                  {active.setting && active.setting !== "other"
+                    ? `${active.before ?? "Unknown"} → ${active.after ?? "Unknown"} ${active.setting ? measurement(active.setting).unit : ""}`
                     : ""}
                 </p>
                 <small>Your previous setup remains in the history.</small>
@@ -117,9 +137,18 @@ export function FollowUp({
                   Keep improvement
                 </button>
               </div>
-              <button className="text-button" onClick={onRecord}>
-                Record your updated position →
-              </button>
+              {activeResult ? (
+                <p className="compare-summary">
+                  {activeResult}{" "}
+                  <button className="text-button" onClick={onReport}>
+                    See before and after
+                  </button>
+                </p>
+              ) : (
+                <button className="text-button" onClick={onRecord}>
+                  Record your updated position
+                </button>
+              )}
             </>
           ) : (
             <>
@@ -139,9 +168,14 @@ export function FollowUp({
                     setAfter("");
                   }}
                 >
-                  <option value="saddleHeight">Saddle height · mm</option>
-                  <option value="saddleSetback">Saddle setback · mm</option>
-                  <option value="saddleTilt">Saddle tilt · degrees</option>
+                  {loggedSettings.map((key) => {
+                    const m = measurement(key);
+                    return (
+                      <option key={key} value={key}>
+                        {m.label} · {m.unit === "°" ? "degrees" : m.unit}
+                      </option>
+                    );
+                  })}
                   <option value="other">Other · describe below</option>
                 </select>
               </Field>
@@ -290,7 +324,6 @@ export function FollowUp({
       <section className="panel">
         <div className="panel-heading">
           <h2>Your fit history</h2>
-          <span>{session.events.length} entries</span>
         </div>
         {!session.events.length ? (
           <p className="muted">
@@ -315,10 +348,14 @@ export function FollowUp({
                       Comfort {e.comfort}/10 · {e.detail}
                     </p>
                   )}
-                  {e.kind === "adjustment" && (
+                  {(e.kind === "adjustment" || e.kind === "revert") && (
                     <small>
-                      Before {e.before ?? "unknown"} · After{" "}
-                      {e.after ?? "see notes"}
+                      {(e.kind === "revert" ||
+                        (e.setting && e.setting !== "other")) &&
+                        describeChange(e, session)}
+                      {result(e) && (
+                        <span className="compare-result">{result(e)}</span>
+                      )}
                     </small>
                   )}
                 </div>

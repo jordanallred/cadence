@@ -1,15 +1,35 @@
-import {
-  ArrowUpRight,
-  CheckCircle2,
-  Printer,
-  Download,
-  Info,
-} from "lucide-react";
+import { CheckCircle2, Printer, Info } from "lucide-react";
 import type { Session, Recommendation } from "../../domain/types";
 import { evidence } from "../../fit/evidence";
-import { exportSession } from "../../storage/portable";
 import { Notice } from "../../components/Fields";
 import { PositionReport, positionMetrics } from "./Visuals";
+import { Comparison } from "./Comparison";
+import { FitNumbers } from "./FitNumbers";
+/** The headline number, naming what moves: "Saddle 5–29 mm back". */
+export function estimateText(e: NonNullable<Recommendation["estimate"]>) {
+  const mm = e.minMm === e.maxMm ? `${e.minMm} mm` : `${e.minMm}–${e.maxMm} mm`;
+  switch (e.setting) {
+    case "saddleHeight":
+      return `${e.direction === "raise" ? "Raise" : "Lower"} ${mm}`;
+    case "saddleSetback":
+      return `Saddle ${mm} ${e.direction}`;
+    case "stem":
+      return `Reach ${mm} ${e.direction} in total`;
+    case "spacers":
+      return `Bar ${mm} higher`;
+    case "barWidth":
+      return `Bar ${mm} ${e.direction}`;
+    case "cleat":
+      return `Cleats ${mm} ${e.direction}`;
+  }
+}
+const kindLabel: Record<Recommendation["outcome"], string> = {
+  experiment: "Try this change",
+  information: "Information needed",
+  "equipment-training": "Equipment or training",
+  assessment: "Get an assessment",
+  "no-change": "No change needed",
+};
 export function Report({
   session,
   results,
@@ -45,15 +65,6 @@ export function Report({
             <Printer size={16} />
             Print report
           </button>
-          <button
-            className="secondary"
-            onClick={() =>
-              exportSession({ ...session, recommendations: results })
-            }
-          >
-            <Download size={16} />
-            Backup
-          </button>
         </div>
       </div>
       <div className="coverage-strip">
@@ -76,22 +87,23 @@ export function Report({
           </div>
         ))}
       </div>
+      <Comparison session={session} />
       {side && <PositionReport clip={side} intake={session.intake} />}
+      <FitNumbers intake={session.intake} results={results} side={side} />
       <div className="report-grid">
         <div>
-          {results.map((r, n) => (
+          {results.map((r) => (
             <section
               key={r.id}
               className={"recommendation " + r.outcome + " " + r.urgency}
             >
-              <div className="recommendation-top">
-                <span className="eyebrow">
-                  {r.urgency !== "routine"
-                    ? r.urgency.toUpperCase()
-                    : r.outcome.replace("-", " ").toUpperCase()}
-                </span>
-                <span className="number">{String(n + 1).padStart(2, "0")}</span>
-              </div>
+              <p className="recommendation-kind">
+                {r.urgency !== "routine"
+                  ? r.urgency === "emergency"
+                    ? "Emergency"
+                    : "Urgent"
+                  : kindLabel[r.outcome]}
+              </p>
               <h2>{r.title}</h2>
               {(r.priority || r.confidence) && (
                 <div className="chips">
@@ -112,19 +124,12 @@ export function Report({
               <p>{r.observations}</p>
               {r.estimate && (
                 <div className="estimate">
-                  <strong>
-                    {r.estimate.direction[0].toUpperCase() +
-                      r.estimate.direction.slice(1)}{" "}
-                    {r.estimate.minMm === r.estimate.maxMm
-                      ? r.estimate.minMm
-                      : `${r.estimate.minMm}–${r.estimate.maxMm}`}{" "}
-                    mm
-                  </strong>
+                  <strong>{estimateText(r.estimate)}</strong>
                   <small>{r.estimate.basis}</small>
                 </div>
               )}
               <div className="action">
-                <ArrowUpRight size={20} />
+                <strong>What to do</strong>
                 <p>{r.action}</p>
               </div>
               <details>
@@ -220,19 +225,25 @@ export function Report({
             </p>
           ))}
           <p>
-            Experiments cover saddle height (with a millimetre estimate when
-            your saddle height is known) and handlebar reach and drop. They are
-            ranked so you change one thing at a time, starting with the saddle.
-            Front and rear views add knee tracking and pelvic stability; they
-            inform referrals but do not set cleat rotation or establish
-            structural asymmetry. Safety screening always runs first.
+            Safety screening always runs first. Experiments are ranked so you
+            change one thing at a time: cleats (only for foot symptoms), then
+            saddle height, then setback, then handlebar reach and drop. Saddle
+            height in millimetres comes from your knee angle and saddle height.
+            Reach, drop and knee position in millimetres scale the video by your
+            height using average body proportions, so they carry about ±40%
+            uncertainty and are given as ranges. Setback and drop are compared
+            with measured road riders; that shows what is common, not what is
+            right for you. Handlebar width follows shoulder width. Front and
+            rear views add knee tracking and pelvic stability; they inform
+            referrals but do not set cleat rotation or establish structural
+            asymmetry.
           </p>
         </details>
       </section>
       <div className="footer-actions no-print">
-        <p>One change at a time. Keep what helps.</p>
+        <p>Next, make the first change and ride with it.</p>
         <button className="primary" onClick={onNext}>
-          Ride & refine →
+          Ride & refine
         </button>
       </div>
     </>

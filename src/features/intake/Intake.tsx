@@ -1,5 +1,6 @@
 import type { Intake as Profile } from "../../domain/types";
-import { Field, Check, Notice } from "../../components/Fields";
+import { Field, Check } from "../../components/Fields";
+import { SetupMeasurements } from "./SetupMeasurements";
 export function Intake({
   value,
   onChange,
@@ -13,38 +14,18 @@ export function Intake({
 }) {
   const set = <K extends keyof Profile>(key: K, val: Profile[K]) =>
     onChange({ ...value, [key]: val });
-  const num = (
-    key: "saddleHeight" | "saddleSetback" | "saddleTilt" | "crankLength",
-    label: string,
-    hint: string,
-  ) => {
-    const length = key !== "saddleTilt";
-    return (
-      <Field label={label + (length ? " · mm" : " · °")} hint={hint}>
-        <input
-          type="number"
-          step="any"
-          disabled={locked}
-          value={value[key] ?? ""}
-          onChange={(e) =>
-            set(key, e.target.value === "" ? null : Number(e.target.value))
-          }
-          placeholder="Unknown"
-        />
-      </Field>
-    );
-  };
   return (
     <>
       <div className="section-title">
-        <span className="eyebrow">01 / UNDERSTAND THE RIDER</span>
-        <h1>Your starting point.</h1>
-        <p>A better fit starts with how you ride and how you feel.</p>
+        <h1>Your starting point</h1>
+        <p>
+          Who rides, on what bike, and anything that hurts. Leave anything you
+          don't know blank.
+        </p>
       </div>
       <section className="panel">
         <div className="panel-heading">
           <h2>You & your bike</h2>
-          <span>Saved on this computer</span>
         </div>
         <div className="form-grid">
           <Field label="Rider name">
@@ -99,7 +80,6 @@ export function Intake({
       <section className="panel">
         <div className="panel-heading">
           <h2>Comfort & context</h2>
-          <span>More than joint angles</span>
         </div>
         <div className="form-grid">
           <Field label="Main area of discomfort">
@@ -247,40 +227,15 @@ export function Intake({
           <h2>Record your setup</h2>
           <span>Leave unknown values blank</span>
         </div>
-        {locked && (
-          <Notice>
-            Baseline settings are preserved. Log further changes in Ride &
-            refine.
-          </Notice>
-        )}
-        <div className="form-grid">
-          {num(
-            "saddleHeight",
-            "Saddle height",
-            "Bottom bracket center to saddle top, measured along the seat-tube line.",
-          )}
-          {num(
-            "saddleSetback",
-            "Saddle setback",
-            "Horizontal distance behind bottom bracket to saddle nose; negative = in front.",
-          )}
-          {num(
-            "saddleTilt",
-            "Saddle tilt",
-            "Record your measurement reference. Negative = nose down.",
-          )}
-          {num(
-            "crankLength",
-            "Crank length",
-            "Usually marked on the crank arm.",
-          )}
-          <Field label="Cockpit settings & measurement notes">
+        <SetupMeasurements value={value} set={set} locked={locked} />
+        <div className="form-grid notes-grid">
+          <Field label="Other setup notes">
             <textarea
               disabled={locked}
               maxLength={1000}
               value={value.cockpit}
               onChange={(e) => set("cockpit", e.target.value)}
-              placeholder="Stem length, spacers, bar position, saddle reference…"
+              placeholder="Spacers above and below the stem, stem angle, saddle model, where you measured from…"
             />
           </Field>
           <Field label="Other notes">
@@ -300,7 +255,7 @@ export function Intake({
       <div className="footer-actions">
         <p>You can update comfort information at any time.</p>
         <button className="primary" onClick={onNext}>
-          Continue to recordings <span>→</span>
+          Continue to recordings
         </button>
       </div>
     </>

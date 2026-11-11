@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Upload, Camera, CheckCircle2, Film, ArrowUpRight } from "lucide-react";
+import { Camera, CheckCircle2, Film, ChevronRight } from "lucide-react";
 import type { ClipAnalysis, View } from "../../domain/types";
 import { analyze, findSteadyPedaling } from "../../analysis/run";
 import { beep } from "./beep";
@@ -229,15 +229,16 @@ export function Capture({
   return (
     <>
       <div className="section-title">
-        <span className="eyebrow">02 / SEE THE WHOLE PICTURE</span>
-        <h1>Every angle matters.</h1>
-        <p>One camera. Three views. A clearer picture of how you move.</p>
+        <h1>Recordings</h1>
+        <p>
+          Film one side of the bike while you pedal. Front and rear views add
+          knee tracking.
+        </p>
       </div>
       <div className="capture-layout">
         <section className="panel upload-panel">
           <div className="panel-heading">
             <h2>Add a recording</h2>
-            <span>Any camera · local analysis</span>
           </div>
           <div className="view-tabs" role="group" aria-label="Recording view">
             {(["left", "right", "front", "rear"] as View[]).map((v) => (
@@ -268,18 +269,14 @@ export function Capture({
                 e.target.value = "";
               }}
             />
-            <div className="upload-icon">
-              <Upload size={28} />
-            </div>
-            <h3>{file ? file.name : "Bring your ride into focus"}</h3>
+            <h3>{file ? file.name : "Choose a video"}</h3>
             <p>
               {file
                 ? `${duration.toFixed(1)} seconds · ${(file.size / 1e6).toFixed(1)} MB`
-                : "Choose a video from your computer"}
+                : "A video file on this computer"}
             </p>
             <span className="small-button">
-              {file ? "Choose another video" : "Browse videos"}{" "}
-              <ArrowUpRight size={14} />
+              {file ? "Choose another video" : "Browse videos"}
             </span>
             <small>
               Phone, action camera, webcam or existing footage.
@@ -387,7 +384,7 @@ export function Capture({
                 </Field>
               </div>
               <Check
-                label="Keep this video in local browser storage (optional)"
+                label="Keep this video with the fit (optional)"
                 checked={retain}
                 onChange={setRetain}
               />
@@ -421,19 +418,14 @@ export function Capture({
               disabled={!file || recording || scanning}
               onClick={() => void run()}
             >
-              Analyze {view} view <ArrowUpRight size={17} />
+              Analyze {view} view
             </button>
           )}
         </section>
         <aside>
           <section className="guide">
-            <span className="eyebrow">A GOOD RECORDING</span>
-            <h2>
-              Make the movement
-              <br />
-              easy to see.
-            </h2>
-            <ol>
+            <h2>Before you record</h2>
+            <ul>
               <li>
                 <strong>Ride steadily</strong>
                 <p>
@@ -455,7 +447,7 @@ export function Capture({
                   shoes and hand position.
                 </p>
               </li>
-            </ol>
+            </ul>
             <details>
               <summary>Tips for phone recordings</summary>
               <p>
@@ -479,9 +471,6 @@ export function Capture({
               </p>
             </details>
           </section>
-          <div className="privacy-note">
-            <span className="status-dot" /> Your videos stay on this computer.
-          </div>
         </aside>
       </div>
       <section className="panel">
@@ -517,7 +506,7 @@ export function Capture({
                     "Review tracking"
                   )}
                 </span>
-                <ArrowUpRight size={16} />
+                <ChevronRight size={16} aria-hidden="true" />
               </button>
             ))}
           </div>
@@ -528,7 +517,7 @@ export function Capture({
           Start with a side view. Add front and rear views for knee tracking.
         </p>
         <button className="primary" onClick={onNext} disabled={busy}>
-          See fit report →
+          See fit report
         </button>
       </div>
     </>
