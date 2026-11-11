@@ -32,8 +32,8 @@ Where riders stopped (each rider counted once, at the furthest step reached):
 | No accepted baseline | |
 | Baseline, no change logged | |
 | Change, no ride logged | |
-| Ride, no re-record | |
-| Re-recorded, no keep/revert | |
+| Ride, no re-record or re-rating | |
+| Re-recorded or re-rated, no keep/revert | |
 | At least one complete cycle | |
 
 Median hours from baseline to first keep-or-revert: [ ] (range [ ]).

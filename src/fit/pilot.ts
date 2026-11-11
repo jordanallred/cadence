@@ -56,14 +56,22 @@ function cycles(s: Session) {
         c.createdAt < until &&
         !c.quality.some((q) => q.severity === "reject"),
     );
+    // A ride that re-rates the rider's symptoms (FitEvent.symptoms, added
+    // with the repeat loop) checks the change as well as a new recording.
+    const reRated = rides.some(
+      (r) =>
+        Array.isArray((r as { symptoms?: unknown }).symptoms) &&
+        ((r as { symptoms?: unknown[] }).symptoms ?? []).length > 0,
+    );
     return {
       adjustment: a,
       rides,
       decision,
       reRecorded,
-      // The loop: one change, ridden at least once, re-recorded, kept or
-      // reverted.
-      complete: rides.length > 0 && reRecorded && !!decision,
+      reRated,
+      // The loop: one change, ridden at least once, checked by a new
+      // recording or a symptom re-rating, then kept or reverted.
+      complete: rides.length > 0 && (reRecorded || reRated) && !!decision,
     };
   });
 }
@@ -152,6 +160,7 @@ export function buildPilotLog(
         response: r.response ?? null,
       })),
       reRecorded: l.reRecorded,
+      reRated: l.reRated,
       decision: l.decision?.kind ?? null,
       decidedHours: l.decision ? at(l.decision.at) : null,
       complete: l.complete,
@@ -186,7 +195,7 @@ function change(e: FitEvent) {
 
 /** Plain-language list of what the file holds, shown before download. */
 export const PILOT_INCLUDES = [
-  "When you recorded, changed something, rode, re-recorded, and kept or reverted, as hours since you started",
+  "When you recorded, changed something, rode, checked the change, and kept or reverted, as hours since you started",
   "How many recordings you made per view, and the reason code for each one Cadence rejected",
   "Your symptom areas and 1–10 ratings at the start and now, and your ride ratings",
   "Which setting you changed and by how much (mm or degrees)",

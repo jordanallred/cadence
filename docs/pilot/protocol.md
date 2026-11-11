@@ -4,7 +4,7 @@ Version 0.1 (draft, 2026-11-11). Owner: pilot lead.
 
 ## 1. Questions the pilot answers
 
-1. **Do riders complete the loop?** Baseline recording → one change → at least one ride with it → re-record → keep or revert. This is the main product metric.
+1. **Do riders complete the loop?** Baseline recording → one change → at least one ride with it → a new recording or a symptom re-rating on that ride → keep or revert. This is the main product metric.
 2. **How close are Cadence's angles to a fitter's?** Bias, mean absolute error and 95% limits of agreement for knee extension, knee flexion at the top of the stroke, torso angle and elbow flexion, from `npm run validate`.
 3. **How often does capture fail, and why?** Every rejected or failed analysis with its reason code, from the pilot logs and the fitters' [capture log](capture-log.csv).
 4. **When does Cadence say "not enough evidence", and is it right to?** Every *review the overlays*, *start with a side view*, *check the difference between side views* or rejected-recording answer, and whether the fitter agreed it was the right call.

@@ -227,3 +227,18 @@ it("loads fits saved before the capture log existed", () => {
   expect(s.captureLog).toEqual([]);
   expect(s.pilotCode).toBeUndefined();
 });
+
+it("counts a symptom re-rating on a ride instead of a re-record", () => {
+  const s = fullCycle();
+  s.clips = s.clips.slice(0, 2);
+  (s.events[1] as Record<string, unknown>).symptoms = [
+    { area: "knee-front", side: "left", severity: 2 },
+  ];
+  const log = buildPilotLog(s, [], opts);
+  expect(log.cycles[0]).toMatchObject({
+    reRecorded: false,
+    reRated: true,
+    complete: true,
+  });
+  expect(log.loop.cyclesComplete).toBe(1);
+});

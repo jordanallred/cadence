@@ -10,7 +10,7 @@ Percentages are of riders who completed the baseline visit.
 
 | # | Signal | Proposed pass | Source |
 |---|---|---|---|
-| 1 | Riders who complete at least one full cycle (baseline, one change, at least one ride with it, re-record, keep or revert) | **≥ 60%** | Pilot log `loop.cyclesComplete ≥ 1` |
+| 1 | Riders who complete at least one full cycle (baseline, one change, at least one ride with it, a new recording or a symptom re-rating on that ride, keep or revert) | **≥ 60%** | Pilot log `loop.cyclesComplete ≥ 1` |
 | 2 | Riders who complete two or more cycles | **≥ 30%** | Pilot log `loop.cyclesComplete ≥ 2` |
 | 3 | Riders who say they will keep using it | **≥ 50%** answer yes | Interview Q11 |
 | 4 | Recommend score (NPS: % 9–10 minus % 0–6) | **≥ 0** | Interview Q12 |
