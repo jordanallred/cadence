@@ -318,7 +318,7 @@ it("loads symptom entries saved by v0.6.2", () => {
   const i = intakeSchema.parse(old);
   expect(i.symptoms).toEqual([
     { area: "knee-front", side: "left", severity: 5, warning: false },
-    { area: "lower-back", side: "both", severity: 1, warning: true },
+    { area: "lower-back", side: "both", severity: 3, warning: true },
     { area: "upper-back", side: "both", severity: 6, warning: false },
     { area: "foot-numb", side: "right", severity: 4, warning: false },
   ]);

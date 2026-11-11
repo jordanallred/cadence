@@ -126,7 +126,7 @@ export function migrateIntake(raw: unknown): unknown {
 }
 /**
  * v0.6.2 saved its own symptom entries: other area ids, a "center" side,
- * severity from 0, a `sharpSuddenWorsening` flag and an onset per entry.
+ * severity from 0 (unrated), a `sharpSuddenWorsening` flag and an onset per entry.
  * Current entries pass through unchanged.
  */
 const v062Area: Record<string, SymptomArea> = {
@@ -155,9 +155,11 @@ function migrateEntries(list: unknown[], intake: Record<string, unknown>) {
     }
     const area =
       typeof e.area === "string" ? (v062Area[e.area] ?? e.area) : e.area;
+    // 0 meant "present, not rated" there; use the same 3/10 as the
+    // single-symptom migration rather than a 1/10 that looks rated.
     const severity =
-      typeof e.severity === "number"
-        ? Math.min(10, Math.max(1, Math.round(e.severity)))
+      typeof e.severity === "number" && Math.round(e.severity) >= 1
+        ? Math.min(10, Math.round(e.severity))
         : 3;
     const entry = {
       area,
