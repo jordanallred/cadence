@@ -235,5 +235,7 @@ export function kneeOverBall(i: Intake, side: ClipAnalysis | undefined) {
   return round((kops / 100) * SEGMENT.thigh * i.riderHeight * 10);
 }
 
-export const rangeText = (r: Range, unit = "mm") =>
-  r.min === r.max ? `${r.min} ${unit}` : `${r.min}–${r.max} ${unit}`;
+export const rangeText = (r: Range, unit = "mm") => {
+  const u = unit === "°" ? "°" : ` ${unit}`;
+  return r.min === r.max ? `${r.min}${u}` : `${r.min}–${r.max}${u}`;
+};

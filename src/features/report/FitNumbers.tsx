@@ -10,6 +10,7 @@ import {
   type Range,
 } from "../../fit/targets";
 import { measurement, type MeasureKey } from "../../fit/measurements";
+import { holdOf } from "../../fit/assessment";
 
 type Row = {
   name: string;
@@ -25,8 +26,8 @@ const mm = (v: number | null, unit = "mm") =>
   v === null ? "Not measured" : `${v} ${unit}`;
 const need = (...keys: MeasureKey[]) =>
   `Add your ${keys.map((k) => measurement(k).label.toLowerCase()).join(" and ")} in Your starting point.`;
-const span = (e: { minMm: number; maxMm: number }) =>
-  rangeText({ min: e.minMm, max: e.maxMm } as Range);
+const span = (e: { minMm: number; maxMm: number; unit?: string }) =>
+  rangeText({ min: e.minMm, max: e.maxMm } as Range, e.unit ?? "mm");
 const conf = (r: Recommendation) =>
   r.confidence
     ? `${r.confidence[0].toUpperCase()}${r.confidence.slice(1)} confidence. `
@@ -133,12 +134,41 @@ export function fitRows(
     });
   }
 
-  // Reach and drop come from the same side-view recommendation.
+  // Saddle tilt
   {
-    const r = rec("reach");
-    const e = r?.estimate;
-    const stem = e && e.setting === "stem" ? e : undefined;
-    const spacers = e && e.setting === "spacers" ? e : undefined;
+    const r = rec("tilt");
+    const e = r?.outcome === "experiment" ? r.estimate : undefined;
+    rows.push({
+      name: "Saddle tilt",
+      now:
+        i.saddleTilt === null
+          ? "Not measured"
+          : i.saddleTilt === 0
+            ? "Level"
+            : `${Math.abs(i.saddleTilt)}° nose ${i.saddleTilt < 0 ? "down" : "up"}`,
+      ...(e
+        ? {
+            tone: "change" as const,
+            next: `Nose ${e.direction === "nose-down" ? "down" : "up"} ${span(e)}`,
+            basis: conf(r!) + e.basis,
+          }
+        : r
+          ? { tone: "keep" as const, next: r.title, basis: r.action }
+          : i.saddleTilt === null
+            ? { tone: "missing" as const, next: need("saddleTilt") }
+            : { tone: "keep" as const, next: "Keep" }),
+    });
+  }
+
+  // Reach and drop
+  {
+    const r = rec("reach"),
+      d = rec("drop");
+    const stem = r?.estimate?.setting === "stem" ? r.estimate : undefined;
+    const spacers =
+      d?.estimate?.setting === "spacers" && d.outcome === "experiment"
+        ? d.estimate
+        : undefined;
     const acting = r && r.outcome === "experiment";
     const sideAngles = side?.metrics.some((m) => m.id === "shoulder-angle");
     rows.push({
@@ -169,16 +199,19 @@ export function fitRows(
               next: "No change while you are comfortable",
               basis: r!.observations,
             }
-          : sideAngles
-            ? {
-                tone: "keep" as const,
-                next: "Keep",
-                basis: "Arm and shoulder angles are inside the practice range.",
-              }
-            : {
-                tone: "missing" as const,
-                next: "Needs a reviewed side view with arms visible",
-              }),
+          : r
+            ? { tone: "keep" as const, next: r.title, basis: r.observations }
+            : sideAngles
+              ? {
+                  tone: "keep" as const,
+                  next: "Keep",
+                  basis:
+                    "Arm and shoulder angles are inside the practice range.",
+                }
+              : {
+                  tone: "missing" as const,
+                  next: "Needs a reviewed side view with arms visible",
+                }),
     });
     const check = dropCheck(i);
     const pop = check
@@ -187,12 +220,12 @@ export function fitRows(
     rows.push({
       name: "Drop (spacers)",
       now: mm(i.barDrop),
-      ...(spacers && acting
+      ...(spacers
         ? {
             tone: "change" as const,
             next: `Raise the bar: move ${span(spacers)} of spacers below the stem`,
             basis:
-              `${conf(r!)}${spacers.basis} ${hasHeight(i) ? "" : need("riderHeight")} ${pop}`.trim(),
+              `${conf(d!)}${spacers.basis} ${hasHeight(i) ? "" : need("riderHeight")} ${pop}`.trim(),
           }
         : check && check.current !== null && check.move !== 0
           ? {
@@ -266,7 +299,7 @@ export function fitRows(
       ...(r?.estimate
         ? {
             tone: "change" as const,
-            next: `${r.outcome === "experiment" ? "Move" : "Optional: move"} back ${span(r.estimate)}`,
+            next: `${r.outcome === "experiment" ? "Move" : "Optional: move"} ${r.estimate.side ? `the ${r.estimate.side} cleat` : "back"}${r.estimate.side ? " back" : ""} ${span(r.estimate)}`,
             basis: conf(r) + r.estimate.basis,
           }
         : c
@@ -281,6 +314,38 @@ export function fitRows(
           : { tone: "missing" as const, next: need("cleatOffset") }),
     });
   }
+
+  // Changes that only come from symptoms: cleat angle, stance, cranks.
+  for (const r of results) {
+    const e = r.estimate;
+    if (r.outcome === "no-change" || !e) continue;
+    const where = e.side ? ` (${e.side})` : "";
+    const amount = span(e);
+    if (e.setting === "cleatRotation")
+      rows.push({
+        name: `Cleat angle${where}`,
+        now: "Not measured",
+        tone: "change",
+        next: `Toes ${amount} more ${e.direction === "toe-out" ? "out" : "in"}`,
+        basis: conf(r) + e.basis,
+      });
+    if (e.setting === "stance")
+      rows.push({
+        name: `Stance width${where}`,
+        now: "Not measured",
+        tone: "change",
+        next: `${e.direction === "wider" ? "Wider" : "Narrower"} by ${amount}`,
+        basis: conf(r) + e.basis,
+      });
+    if (e.setting === "crank")
+      rows.push({
+        name: "Crank length",
+        now: mm(i.crankLength),
+        tone: "change",
+        next: `${amount} shorter when you next replace them`,
+        basis: conf(r) + e.basis,
+      });
+  }
   return rows;
 }
 
@@ -293,9 +358,8 @@ export function FitNumbers({
   results: Recommendation[];
   side: ClipAnalysis | undefined;
 }) {
-  // Safety outcomes replace the fit advice; so does this table.
-  if (results.some((r) => r.outcome === "assessment" || r.id === "screen"))
-    return null;
+  // Emergency and urgent outcomes replace the fit advice; so does this table.
+  if (holdOf(results)) return null;
   const rows = fitRows(intake, results, side);
   return (
     <section className="fit-numbers" aria-labelledby="fit-numbers-title">

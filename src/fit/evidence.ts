@@ -1,17 +1,14 @@
-export const RULE_VERSION = "0.4.0";
+export const RULE_VERSION = "0.5.0";
 export const evidence: Record<
   string,
   { title: string; url: string; limit: string }
 > = {
-  "cycling-injuries": {
-    title: "Common cycling injuries: management and prevention (1991)",
-    url: "https://pubmed.ncbi.nlm.nih.gov/2011683/",
-    limit: "Review describes knee, back, neck, hand and saddle complaints. The area list is for recording symptoms, not diagnosing their cause.",
-  },
   "cycling-overuse": {
-    title: "Factors associated with overuse injury in cyclists: systematic review (2022)",
+    title:
+      "Factors associated with overuse injury in cyclists: systematic review (2022)",
     url: "https://pubmed.ncbi.nlm.nih.gov/35151569/",
-    limit: "No strong evidence links a single bike, body or load measure to overuse pain; symptom location alone cannot prescribe an adjustment.",
+    limit:
+      "No strong evidence links a single bike, body or load measure to overuse pain; symptom location alone cannot prescribe an adjustment.",
   },
   "nhs-back": {
     title: "NHS: Back pain",
@@ -80,6 +77,53 @@ export const evidence: Record<
     url: "https://pubmed.ncbi.nlm.nih.gov/35782160/",
     limit:
       "Holliday & Swart note the plumb-line rule has not been validated and no data support a role in preventing knee injury. Shown for information only.",
+  },
+  wanich: {
+    title: "Wanich et al. — Cycling injuries of the lower extremity (2007)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/18063715/",
+    limit:
+      "Clinical review linking knee, hip, foot and Achilles complaints to saddle, cleat and crank set-up. Expert synthesis, not trials of each adjustment.",
+  },
+  mellion: {
+    title:
+      "Mellion — Common cycling injuries: management and prevention (1991)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/2011683/",
+    limit:
+      "Older clinical review of overuse complaints by body area. Fit guidance is expert opinion.",
+  },
+  asplund: {
+    title: "Asplund & St Pierre — Knee pain and bicycling (2004)",
+    url: "https://lida.sport-iat.de/bdr/Record/3037186?lng=en",
+    limit:
+      "Clinical review of knee pain by location (front, back, inside, outside) and the fit faults behind each. Expert opinion with limited trial evidence.",
+  },
+  kotler: {
+    title:
+      "Kotler et al. — Training and injury considerations in female-identifying cyclists (2023)",
+    url: "https://doi.org/10.53646/jwsm.v3i2.45",
+    limit:
+      "Narrative review focused on female-identifying cyclists; covers hip, back, neck, hands, saddle and foot complaints and their fit links. Expert synthesis.",
+  },
+  patterson: {
+    title:
+      "Patterson et al. — Ulnar and median nerve palsy in long-distance cyclists (2003)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12860549/",
+    limit:
+      "Prospective study of riders on a multi-day tour; most had hand numbness or weakness. Links it to hand pressure and position, not to a specific bar setting.",
+  },
+  bressel: {
+    title:
+      "Bressel & Larson — Saddle design, pelvic and trunk angle, and comfort (2003)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12569224/",
+    limit:
+      "Small lab study: saddle shape changed pelvic tilt and comfort. Supports tilt and shape as levers, not a specific angle.",
+  },
+  "saddle-pressure": {
+    title:
+      "Saddle pressure factors in road and off-road cyclists of both genders (2023)",
+    url: "https://pubmed.ncbi.nlm.nih.gov/37367235/",
+    limit:
+      "Narrative review: saddle tilt, height, handlebar position and saddle shape change pressure on the perineum. Studies are small and mostly short.",
   },
   product: {
     title: "Cadence decision policy",

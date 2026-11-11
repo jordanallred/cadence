@@ -52,7 +52,7 @@ export function targetRange(
         low: UPPER.torsoMin[intake.discipline],
         // The minimum depends on the riding discipline set in the profile.
         basis: "practice",
-        note: "Torso angle is only acted on if you have neck, back or hand symptoms.",
+        note: "Torso angle is only acted on if you report a related symptom, such as neck, back, hand or saddle discomfort.",
       };
   }
 }

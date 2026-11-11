@@ -1,13 +1,18 @@
 import { CheckCircle2, Printer, Info } from "lucide-react";
 import type { Session, Recommendation } from "../../domain/types";
 import { evidence } from "../../fit/evidence";
+import { CLEAR_LEAD } from "../../fit/recommend";
 import { Notice } from "../../components/Fields";
 import { PositionReport, positionMetrics } from "./Visuals";
 import { Comparison } from "./Comparison";
 import { FitNumbers } from "./FitNumbers";
+import { SymptomPlan } from "./SymptomPlan";
 /** The headline number, naming what moves: "Saddle 5–29 mm back". */
 export function estimateText(e: NonNullable<Recommendation["estimate"]>) {
-  const mm = e.minMm === e.maxMm ? `${e.minMm} mm` : `${e.minMm}–${e.maxMm} mm`;
+  const unit = e.unit === "°" ? "°" : " mm";
+  const mm =
+    e.minMm === e.maxMm ? `${e.minMm}${unit}` : `${e.minMm}–${e.maxMm}${unit}`;
+  const side = e.side ? `${e.side[0].toUpperCase()}${e.side.slice(1)} ` : "";
   switch (e.setting) {
     case "saddleHeight":
       return `${e.direction === "raise" ? "Raise" : "Lower"} ${mm}`;
@@ -20,7 +25,15 @@ export function estimateText(e: NonNullable<Recommendation["estimate"]>) {
     case "barWidth":
       return `Bar ${mm} ${e.direction}`;
     case "cleat":
-      return `Cleats ${mm} ${e.direction}`;
+      return e.side ? `${side}cleat ${mm} back` : `Cleats ${mm} ${e.direction}`;
+    case "saddleTilt":
+      return `Saddle nose ${mm} ${e.direction === "nose-down" ? "down" : "up"}`;
+    case "cleatRotation":
+      return `${side || "Both "}${side ? "toes" : "feet: toes"} ${mm} ${e.direction === "toe-out" ? "out" : "in"}`;
+    case "stance":
+      return `${side || ""}${side ? "stance" : "Stance"} ${mm} ${e.direction}`;
+    case "crank":
+      return `Cranks ${mm} shorter`;
   }
 }
 const kindLabel: Record<Recommendation["outcome"], string> = {
@@ -90,6 +103,7 @@ export function Report({
       <Comparison session={session} />
       {side && <PositionReport clip={side} intake={session.intake} />}
       <FitNumbers intake={session.intake} results={results} side={side} />
+      <SymptomPlan intake={session.intake} results={results} />
       <div className="report-grid">
         <div>
           {results.map((r) => (
@@ -210,10 +224,12 @@ export function Report({
       <section className="panel policy" id="policy">
         <h2>How we make a recommendation</h2>
         <p>
-          Your context comes first. The app checks symptoms and feedback, then
-          recording quality and reviewed movement. It may recommend a small
-          experiment, more information, broader assessment, or no change. A
-          comfortable rider does not need to chase a target angle.
+          Only emergency or urgent warning signs stop the advice. Everything
+          else, such as an unanswered safety check, long-lasting symptoms or a
+          ride that went worse, adds a note and the changes still come, in
+          millimetres. An area you mark as sharp, sudden or worsening is held
+          back on its own and the report says who to see. A comfortable rider
+          does not need to chase a target angle.
         </p>
         <details>
           <summary>Evidence & current limits</summary>
@@ -225,18 +241,27 @@ export function Report({
             </p>
           ))}
           <p>
-            Safety screening always runs first. Experiments are ranked so you
-            change one thing at a time: cleats (only for foot symptoms), then
-            saddle height, then setback, then handlebar reach and drop. Saddle
-            height in millimetres comes from your knee angle and saddle height.
+            Safety screening always runs first. Then changes are ranked so you
+            make one at a time. First come problems the video or your
+            measurements show directly, in fitting order from the feet up:
+            cleats, saddle height, setback, tilt, then handlebar height and
+            reach. After that, changes that come only from your symptoms, worst
+            symptom first. When two symptoms pull one setting opposite ways, a
+            video measurement outside its range decides; otherwise the worse
+            symptom wins if it is at least {CLEAR_LEAD} points worse, and if not
+            the setting stays put and the other changes take over. A change you
+            logged as making a ride worse is not suggested again. Saddle height
+            in millimetres comes from your knee angle and saddle height;
+            symptoms can move it within the 30–40° range but never out of it.
             Reach, drop and knee position in millimetres scale the video by your
             height using average body proportions, so they carry about ±40%
             uncertainty and are given as ranges. Setback and drop are compared
             with measured road riders; that shows what is common, not what is
-            right for you. Handlebar width follows shoulder width. Front and
-            rear views add knee tracking and pelvic stability; they inform
-            referrals but do not set cleat rotation or establish structural
-            asymmetry.
+            right for you. Cleat angle and stance width cannot be seen on a side
+            video, so they come from your symptoms only, in 1–2° and 1–4 mm
+            steps. Which symptom points to which setting follows the clinical
+            reviews listed above; they are expert synthesis, not trials of each
+            adjustment.
           </p>
         </details>
       </section>
