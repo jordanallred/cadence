@@ -72,6 +72,18 @@ export const qualitySchema = z.object({
   message: z.string(),
 });
 export type QualityIssue = z.infer<typeof qualitySchema>;
+export const keyMomentSchema = z.object({
+  /** Leg most extended, or knee most bent at the top of the stroke. */
+  position: z.enum(["extension", "top"]),
+  timeMs: z.number().nonnegative(),
+  /** JPEG data URL of that video frame, kept small. */
+  image: z
+    .string()
+    .startsWith("data:image/jpeg;base64,")
+    .max(300_000)
+    .optional(),
+});
+export type KeyMoment = z.infer<typeof keyMomentSchema>;
 export const clipSchema = z.object({
   id: z.string(),
   view: viewSchema,
@@ -88,18 +100,8 @@ export const clipSchema = z.object({
   createdAt: z.string(),
   setupRevision: z.number().int().nonnegative(),
   reviewed: z.boolean(),
-  /** Frame shown in the report: knee at full extension (side views). */
-  keyframe: z
-    .object({
-      timeMs: z.number().nonnegative(),
-      /** JPEG data URL of that video frame, kept small. */
-      image: z
-        .string()
-        .startsWith("data:image/jpeg;base64,")
-        .max(600_000)
-        .optional(),
-    })
-    .optional(),
+  /** Still frames shown in the report (side views). */
+  keyframes: z.array(keyMomentSchema).max(4).optional(),
 });
 export type ClipAnalysis = z.infer<typeof clipSchema>;
 export const recommendationSchema = z.object({

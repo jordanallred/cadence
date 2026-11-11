@@ -9,8 +9,7 @@ import type { Session, Recommendation } from "../../domain/types";
 import { evidence } from "../../fit/evidence";
 import { exportSession } from "../../storage/portable";
 import { Notice } from "../../components/Fields";
-import { targetRange } from "../../fit/ranges";
-import { RangeBar, StrokeFigure } from "./Visuals";
+import { PositionReport, positionMetrics } from "./Visuals";
 export function Report({
   session,
   results,
@@ -29,17 +28,12 @@ export function Report({
   const side = selected.find(
     (c) => (c.view === "left" || c.view === "right") && c.metrics.length,
   );
-  const ranged = (side?.metrics ?? []).flatMap((m) => {
-    const range = targetRange(m.id, session.intake);
-    return range ? [{ metric: m, range }] : [];
-  });
-  const shownAsBar = new Set(ranged.map((r) => r.metric.id));
+  const drawn = side ? positionMetrics(side) : new Set<string>();
   return (
     <>
       <div className="section-title report-title">
         <div>
-          <span className="eyebrow">03 / YOUR FIT, UNDERSTOOD</span>
-          <h1>Evidence. Then action.</h1>
+          <h1>Fit report</h1>
           <p>
             {session.intake.name || "Your rider profile"} ·{" "}
             {session.intake.bike || "Your bike"} · Setup{" "}
@@ -82,24 +76,7 @@ export function Report({
           </div>
         ))}
       </div>
-      {side && ranged.length > 0 && (
-        <section className="panel side-visual">
-          <h2>Side view against target ranges</h2>
-          <div className="side-visual-body">
-            <StrokeFigure clip={side} />
-            <div className="ranges">
-              {ranged.map(({ metric, range }) => (
-                <RangeBar key={metric.id} metric={metric} range={range} />
-              ))}
-              {!side.reviewed && (
-                <small className="muted">
-                  Review the tracking for this video to confirm these numbers.
-                </small>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
+      {side && <PositionReport clip={side} intake={session.intake} />}
       <div className="report-grid">
         <div>
           {results.map((r, n) => (
@@ -182,8 +159,7 @@ export function Report({
         </div>
         <aside>
           <section className="panel">
-            <span className="eyebrow">MOVEMENT SNAPSHOT</span>
-            <h2>What the videos show</h2>
+            <h2>{side ? "Other measurements" : "What the videos show"}</h2>
             {selected.length ? (
               selected.map((c) => (
                 <div className="snapshot" key={c.id}>
@@ -195,7 +171,7 @@ export function Report({
                     .filter(
                       (m) =>
                         m.id !== "cycles" &&
-                        !(c.id === side?.id && shownAsBar.has(m.id)),
+                        !(c.id === side?.id && drawn.has(m.id)),
                     )
                     .map((m) => (
                       <div key={m.id}>

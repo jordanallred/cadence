@@ -1,4 +1,4 @@
-import type { ClipAnalysis, PoseFrame, View } from "../domain/types";
+import type { ClipAnalysis, KeyMoment, PoseFrame, View } from "../domain/types";
 import { openVideo, seek, sampleTimes } from "../video/sample";
 import { measureClip } from "./metrics";
 import {
@@ -82,7 +82,7 @@ async function withPose<T>(
   }
 }
 
-/** A still of the video at `time` seconds, at most 720 px wide. */
+/** A still of the video at `time` seconds, at most 640 px wide. */
 async function grab(
   video: HTMLVideoElement,
   time: number,
@@ -90,15 +90,15 @@ async function grab(
 ): Promise<string | undefined> {
   try {
     await seek(video, time, signal);
-    const scale = Math.min(1, 720 / video.videoWidth),
+    const scale = Math.min(1, 640 / video.videoWidth),
       canvas = document.createElement("canvas");
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     canvas
       .getContext("2d")!
       .drawImage(video, 0, 0, canvas.width, canvas.height);
-    const url = canvas.toDataURL("image/jpeg", 0.8);
-    return url.length < 600_000 ? url : undefined;
+    const url = canvas.toDataURL("image/jpeg", 0.78);
+    return url.length < 300_000 ? url : undefined;
   } catch (e) {
     if (signal.aborted) throw e;
     return undefined;
@@ -120,12 +120,18 @@ export async function analyze(
     onProgress,
     signal,
     async (frames, video) => {
-      const { keyframeMs, ...measured } = measureClip(
+      const { keyframes, ...measured } = measureClip(
         frames,
         view,
         video.videoWidth,
         video.videoHeight,
       );
+      const stills: KeyMoment[] = [];
+      for (const k of keyframes ?? [])
+        stills.push({
+          ...k,
+          image: await grab(video, k.timeMs / 1000, signal),
+        });
       return {
         id: crypto.randomUUID(),
         view,
@@ -136,14 +142,7 @@ export async function analyze(
         height: video.videoHeight,
         frames,
         ...measured,
-        ...(keyframeMs === undefined
-          ? {}
-          : {
-              keyframe: {
-                timeMs: keyframeMs,
-                image: await grab(video, keyframeMs / 1000, signal),
-              },
-            }),
+        ...(stills.length ? { keyframes: stills } : {}),
         modelVersion: MODEL_VERSION,
         createdAt: new Date().toISOString(),
         setupRevision: revision,
