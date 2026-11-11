@@ -67,9 +67,11 @@ export function FollowUp({
   return (
     <>
       <div className="section-title">
-        <span className="eyebrow">04 / KEEP WHAT WORKS</span>
-        <h1>The ride is the test.</h1>
-        <p>Measure a change. Ride with it. Listen to your body.</p>
+        <h1>Ride & refine</h1>
+        <p>
+          Make one change, ride with it, then record how it felt. Keep it only
+          if riding is better.
+        </p>
       </div>
       {error && <Notice tone="warning">{error}</Notice>}
       {blocked && (
@@ -83,12 +85,11 @@ export function FollowUp({
         <section className="panel">
           <div className="panel-heading">
             <h2>{active ? "Your active experiment" : "Log an adjustment"}</h2>
-            <span>One at a time</span>
           </div>
           {active ? (
             <>
               <div className="active-experiment">
-                <span className="eyebrow">IN PROGRESS</span>
+                <span className="eyebrow">In progress</span>
                 <h3>{active.detail}</h3>
                 <p>
                   {active.setting && active.setting !== "other"
@@ -145,7 +146,7 @@ export function FollowUp({
                 </p>
               ) : (
                 <button className="text-button" onClick={onRecord}>
-                  Record your updated position →
+                  Record your updated position
                 </button>
               )}
             </>
@@ -323,7 +324,6 @@ export function FollowUp({
       <section className="panel">
         <div className="panel-heading">
           <h2>Your fit history</h2>
-          <span>{session.events.length} entries</span>
         </div>
         {!session.events.length ? (
           <p className="muted">

@@ -1,13 +1,6 @@
-import {
-  ArrowUpRight,
-  CheckCircle2,
-  Printer,
-  Download,
-  Info,
-} from "lucide-react";
+import { CheckCircle2, Printer, Info } from "lucide-react";
 import type { Session, Recommendation } from "../../domain/types";
 import { evidence } from "../../fit/evidence";
-import { exportSession } from "../../storage/portable";
 import { Notice } from "../../components/Fields";
 import { PositionReport, positionMetrics } from "./Visuals";
 import { Comparison } from "./Comparison";
@@ -30,6 +23,13 @@ export function estimateText(e: NonNullable<Recommendation["estimate"]>) {
       return `Cleats ${mm} ${e.direction}`;
   }
 }
+const kindLabel: Record<Recommendation["outcome"], string> = {
+  experiment: "Try this change",
+  information: "Information needed",
+  "equipment-training": "Equipment or training",
+  assessment: "Get an assessment",
+  "no-change": "No change needed",
+};
 export function Report({
   session,
   results,
@@ -65,15 +65,6 @@ export function Report({
             <Printer size={16} />
             Print report
           </button>
-          <button
-            className="secondary"
-            onClick={() =>
-              exportSession({ ...session, recommendations: results })
-            }
-          >
-            <Download size={16} />
-            Backup
-          </button>
         </div>
       </div>
       <div className="coverage-strip">
@@ -101,19 +92,18 @@ export function Report({
       <FitNumbers intake={session.intake} results={results} side={side} />
       <div className="report-grid">
         <div>
-          {results.map((r, n) => (
+          {results.map((r) => (
             <section
               key={r.id}
               className={"recommendation " + r.outcome + " " + r.urgency}
             >
-              <div className="recommendation-top">
-                <span className="eyebrow">
-                  {r.urgency !== "routine"
-                    ? r.urgency.toUpperCase()
-                    : r.outcome.replace("-", " ").toUpperCase()}
-                </span>
-                <span className="number">{String(n + 1).padStart(2, "0")}</span>
-              </div>
+              <p className="recommendation-kind">
+                {r.urgency !== "routine"
+                  ? r.urgency === "emergency"
+                    ? "Emergency"
+                    : "Urgent"
+                  : kindLabel[r.outcome]}
+              </p>
               <h2>{r.title}</h2>
               {(r.priority || r.confidence) && (
                 <div className="chips">
@@ -139,7 +129,7 @@ export function Report({
                 </div>
               )}
               <div className="action">
-                <ArrowUpRight size={20} />
+                <strong>What to do</strong>
                 <p>{r.action}</p>
               </div>
               <details>
@@ -251,9 +241,9 @@ export function Report({
         </details>
       </section>
       <div className="footer-actions no-print">
-        <p>One change at a time. Keep what helps.</p>
+        <p>Next, make the first change and ride with it.</p>
         <button className="primary" onClick={onNext}>
-          Ride & refine →
+          Ride & refine
         </button>
       </div>
     </>

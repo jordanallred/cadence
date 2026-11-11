@@ -17,14 +17,15 @@ export function Intake({
   return (
     <>
       <div className="section-title">
-        <span className="eyebrow">01 / UNDERSTAND THE RIDER</span>
-        <h1>Your starting point.</h1>
-        <p>A better fit starts with how you ride and how you feel.</p>
+        <h1>Your starting point</h1>
+        <p>
+          Who rides, on what bike, and anything that hurts. Leave anything you
+          don't know blank.
+        </p>
       </div>
       <section className="panel">
         <div className="panel-heading">
           <h2>You & your bike</h2>
-          <span>Saved on this computer</span>
         </div>
         <div className="form-grid">
           <Field label="Rider name">
@@ -79,7 +80,6 @@ export function Intake({
       <section className="panel">
         <div className="panel-heading">
           <h2>Comfort & context</h2>
-          <span>More than joint angles</span>
         </div>
         <div className="form-grid">
           <Field label="Main area of discomfort">
@@ -255,7 +255,7 @@ export function Intake({
       <div className="footer-actions">
         <p>You can update comfort information at any time.</p>
         <button className="primary" onClick={onNext}>
-          Continue to recordings <span>→</span>
+          Continue to recordings
         </button>
       </div>
     </>

@@ -93,8 +93,8 @@ p {
 }
 h1 {
   font-family: "Manrope", "Segoe UI", sans-serif;
-  letter-spacing: -2px;
-  font-size: 42px;
+  letter-spacing: -0.8px;
+  font-size: 34px;
   line-height: 1.12;
   font-weight: 600;
   margin-bottom: 14px;
@@ -113,7 +113,7 @@ p {
   color: var(--muted);
 }
 small {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 svg {
@@ -157,16 +157,11 @@ svg {
 .brand-period {
   color: #88a94a;
 }
-.workspace-label {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  color: #8a968d;
-  margin: 48px 12px 18px;
-}
 nav {
   display: flex;
   flex-direction: column;
   gap: 7px;
+  margin-top: 36px;
 }
 nav button {
   justify-content: flex-start;
@@ -186,17 +181,12 @@ nav button span:nth-child(2) {
   gap: 5px;
 }
 nav strong {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 nav small {
-  font-size: 10px;
+  font-size: 12px;
   color: #849187;
-}
-nav .step-number {
-  margin-left: auto;
-  font-size: 10px;
-  color: #98a396;
 }
 .session-picker {
   border-top: 1px solid var(--line);
@@ -204,81 +194,30 @@ nav .step-number {
   padding-top: 25px;
 }
 .session-picker label {
-  font-size: 10px;
-  letter-spacing: 1.3px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--muted);
 }
 .session-picker select {
   margin: 12px 0;
-  font-size: 12px;
+  font-size: 13px;
   padding: 10px;
 }
 .session-picker button {
-  font-size: 12px;
-}
-.sidebar-bottom {
-  margin: auto 12px 0;
-  padding-top: 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  color: var(--green);
-}
-.sidebar-bottom strong {
   font-size: 13px;
-}
-.sidebar-bottom p {
-  font-size: 12px;
-  line-height: 1.65;
-  margin: 0;
-}
-.sidebar-bottom > span {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  color: #99a592;
-  margin-top: 10px;
 }
 .main-shell {
   margin-left: 264px;
   width: calc(100% - 264px);
 }
-.topbar {
-  height: 78px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--line);
-  padding: 0 48px;
-  background: #fbfcfa;
-}
-.breadcrumb {
-  font-size: 12px;
-  color: var(--muted);
-}
-.breadcrumb span {
-  margin: 0 13px;
-  color: #b0b8ad;
-}
-.breadcrumb strong {
-  font-weight: 500;
-  color: var(--ink);
-}
 .save-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
+  margin: 4px 0 0;
 }
-.status-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #719f5d;
-}
-.status-dot.bad {
-  background: #be653e;
+.save-indicator.bad {
+  color: #9a452c;
+  font-weight: 600;
 }
 main {
   max-width: 1370px;
@@ -289,12 +228,11 @@ main {
   margin: 0 0 30px;
 }
 .eyebrow {
-  font-size: 10px;
-  letter-spacing: 1.65px;
+  font-size: 13px;
   font-weight: 600;
-  color: #7c8f77;
+  color: var(--muted);
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .section-title p {
   font-size: 14px;
@@ -319,7 +257,7 @@ main {
   margin: 0;
 }
 .panel-heading > span {
-  font-size: 10px;
+  font-size: 12px;
   color: #8b978b;
 }
 .form-grid {
@@ -332,7 +270,7 @@ main {
   flex-direction: column;
   gap: 9px;
   margin-bottom: 18px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .form-grid .field {
@@ -341,19 +279,19 @@ main {
 .field small {
   color: #869185;
   font-weight: 400;
-  font-size: 11px;
+  font-size: 13px;
 }
 .field input,
 .field select,
 .field textarea {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
 }
 .check {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 12px;
+  font-size: 13px;
   color: #5d7265;
   line-height: 1.6;
   cursor: pointer;
@@ -376,15 +314,15 @@ main {
   border-radius: 8px;
   padding: 17px 19px;
   margin-top: 22px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .screen summary {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .screen summary > span {
   float: right;
-  font-size: 10px;
+  font-size: 12px;
   color: #809172;
 }
 .screen p {
@@ -403,7 +341,7 @@ main {
   color: #fff;
   border-color: var(--green);
   padding: 13px 19px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   min-height: 44px;
 }
@@ -417,7 +355,7 @@ main {
   background: #fff;
   color: var(--green);
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 13px;
   min-height: 40px;
 }
 .secondary:hover {
@@ -428,7 +366,7 @@ main {
   background: none;
   color: var(--green);
   padding: 8px 0;
-  font-size: 12px;
+  font-size: 13px;
   justify-content: flex-start;
 }
 .full {
@@ -443,7 +381,7 @@ main {
   margin: 27px 0 50px;
 }
 .footer-actions p {
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
 }
 .capture-layout {
@@ -464,7 +402,7 @@ main {
   border-color: transparent;
   background: none;
   padding: 10px 3px;
-  font-size: 12px;
+  font-size: 13px;
   color: #839079;
 }
 .view-tabs button.selected {
@@ -499,23 +437,13 @@ main {
   outline: 2px solid var(--green);
   outline-offset: 3px;
 }
-.upload-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #eaf2df;
-  display: grid;
-  place-items: center;
-  color: var(--green);
-  margin-bottom: 23px;
-}
 .dropzone h3 {
   font-size: 19px;
   letter-spacing: -0.5px;
   margin-bottom: 8px;
 }
 .dropzone p {
-  font-size: 12px;
+  font-size: 13px;
   margin-bottom: 19px;
 }
 .small-button {
@@ -526,12 +454,12 @@ main {
   padding: 10px 15px;
   border: 1px solid #d6dfcc;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .dropzone small {
   margin-top: 20px;
   color: #8b9783;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.8;
 }
 .camera-row {
@@ -542,7 +470,7 @@ main {
   margin: 17px 0;
 }
 .camera-row > span {
-  font-size: 10px;
+  font-size: 12px;
   color: #8a9781;
 }
 .guide {
@@ -552,57 +480,32 @@ main {
   padding: 28px;
 }
 .guide h2 {
-  font-family: "Manrope", sans-serif;
-  line-height: 1.4;
-  font-size: 24px;
-  letter-spacing: -0.8px;
-  margin-bottom: 29px;
+  font-size: 19px;
+  margin-bottom: 18px;
 }
-.guide ol {
-  list-style: none;
-  counter-reset: guide;
-  padding: 0;
+.guide ul {
+  padding: 0 0 0 18px;
   margin: 0;
 }
 .guide li {
-  counter-increment: guide;
-  padding-left: 34px;
-  position: relative;
-  margin-bottom: 23px;
-}
-.guide li:before {
-  content: counter(guide, decimal-leading-zero);
-  position: absolute;
-  left: 0;
-  top: 1px;
-  font-size: 11px;
-  color: #8fa179;
+  margin-bottom: 18px;
 }
 .guide strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 .guide p {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.8;
   margin-top: 7px;
   margin-bottom: 0;
 }
 .guide details {
-  font-size: 11px;
+  font-size: 13px;
   border-top: 1px solid #dbe3d1;
   padding-top: 15px;
   margin-top: 15px;
   color: #5b7354;
-}
-.privacy-note {
-  font-size: 11px;
-  color: #829077;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 19px;
 }
 .empty-inline {
   display: flex;
@@ -612,7 +515,7 @@ main {
   color: #a5b29a;
 }
 .empty-inline p {
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
 }
 .clip-list {
@@ -636,11 +539,11 @@ main {
   min-width: 0;
 }
 .clip-list strong {
-  font-size: 13px;
+  font-size: 14px;
   text-transform: capitalize;
 }
 .clip-list small {
-  font-size: 10px;
+  font-size: 12px;
   color: #8b9685;
   overflow-wrap: anywhere;
 }
@@ -649,7 +552,7 @@ main {
   gap: 5px;
   align-items: center;
   margin-left: auto;
-  font-size: 10px;
+  font-size: 12px;
 }
 .notice {
   display: flex;
@@ -660,7 +563,7 @@ main {
   padding: 16px 18px;
   border-radius: 8px;
   color: #50664c;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   margin-bottom: 20px;
 }
@@ -685,7 +588,7 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
 }
 progress {
   width: 100%;
@@ -742,13 +645,13 @@ progress {
   padding: 25px;
   text-align: center;
   color: #eef3e4;
-  font-size: 12px;
+  font-size: 13px;
 }
 .video-missing p {
   color: inherit;
 }
 .video-missing input {
-  font-size: 11px;
+  font-size: 13px;
   background: #244438;
   color: white;
 }
@@ -756,7 +659,7 @@ progress {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 10px;
+  font-size: 12px;
   margin: 12px 0;
 }
 .frame-controls input {
@@ -774,7 +677,7 @@ progress {
   margin-top: 15px;
 }
 .correction p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .metric-list > div {
   display: flex;
@@ -784,7 +687,7 @@ progress {
   border-bottom: 1px solid var(--line);
 }
 .metric-list span {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
 }
 .metric-list strong {
@@ -793,12 +696,12 @@ progress {
   font-weight: 500;
 }
 .metric-list small {
-  font-size: 10px;
+  font-size: 12px;
   margin-left: 4px;
   font-weight: 400;
 }
 .caption {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.8;
 }
 .report-title {
@@ -826,11 +729,11 @@ progress {
   border: 0;
 }
 .coverage-strip strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 .coverage-strip span {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   margin-left: auto;
 }
@@ -849,17 +752,6 @@ progress {
   padding: 27px;
   margin-bottom: 22px;
 }
-.recommendation-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.recommendation .number {
-  font-family: "Manrope", sans-serif;
-  font-size: 27px;
-  color: #c4ceba;
-  letter-spacing: -1px;
-}
 .recommendation .eyebrow {
   margin: 0;
 }
@@ -870,11 +762,11 @@ progress {
   letter-spacing: -0.8px;
 }
 .recommendation p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .recommendation .action {
-  display: flex;
-  gap: 12px;
+  display: grid;
+  gap: 4px;
   background: #eff5e8;
   border-radius: 7px;
   padding: 17px;
@@ -892,7 +784,7 @@ progress {
   border-color: #c98570;
 }
 .recommendation details {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
 }
 summary {
@@ -921,21 +813,21 @@ dd {
   margin-top: 15px;
 }
 .snapshot h3 {
-  font-size: 12px;
+  font-size: 13px;
   text-transform: capitalize;
 }
 .snapshot h3 > span {
   font-weight: 400;
   float: right;
   color: #839477;
-  font-size: 10px;
+  font-size: 12px;
 }
 .snapshot > div {
   display: flex;
   justify-content: space-between;
   gap: 15px;
   margin: 12px 0;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 .snapshot strong {
@@ -944,13 +836,13 @@ dd {
   white-space: nowrap;
 }
 .snapshot small {
-  font-size: 9px;
+  font-size: 12px;
 }
 .policy p {
-  font-size: 12px;
+  font-size: 13px;
 }
 .policy details {
-  font-size: 12px;
+  font-size: 13px;
 }
 .policy details > p {
   padding: 8px 0;
@@ -996,11 +888,11 @@ dd {
   margin-bottom: 10px;
 }
 .timeline h3 {
-  font-size: 13px;
+  font-size: 14px;
   margin-bottom: 8px;
 }
 .timeline p {
-  font-size: 12px;
+  font-size: 13px;
   margin: 0;
 }
 .timeline small {
@@ -1015,15 +907,8 @@ dd {
   align-items: center;
   gap: 20px;
 }
-.wordmark {
-  font-family: "Manrope", sans-serif;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -1px;
-  color: #56704f;
-}
 .workspace-footer p {
-  font-size: 10px;
+  font-size: 12px;
   margin: 6px 0 0;
   color: #8e9a83;
 }
@@ -1040,7 +925,7 @@ dd {
   background: none;
   border: 0;
   padding: 5px 0;
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
   color: #7c8e70;
   cursor: pointer;
@@ -1049,7 +934,7 @@ dd {
   display: none;
 }
 .storage-note {
-  font-size: 10px;
+  font-size: 12px;
   color: #91a086;
   line-height: 1.8;
 }
@@ -1063,7 +948,7 @@ dd {
   border: 0;
   color: white;
   padding: 8px 12px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .loading {
   display: grid;
@@ -1096,15 +981,12 @@ dd {
   main {
     padding: 32px 28px;
   }
-  .topbar {
-    padding: 0 28px;
-  }
   .capture-layout,
   .review-layout,
   .report-grid {
     grid-template-columns: 1fr;
   }
-  .guide ol {
+  .guide ul {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 18px;
@@ -1143,10 +1025,20 @@ dd {
     width: 34px;
     height: 34px;
   }
-  .workspace-label,
-  .session-picker,
-  .sidebar-bottom {
-    display: none;
+  .session-picker {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 16px 0 0;
+    padding-top: 14px;
+  }
+  .session-picker label,
+  .session-picker .save-indicator {
+    grid-column: 1 / -1;
+  }
+  .session-picker select {
+    margin: 0;
   }
   nav {
     flex-direction: row;
@@ -1160,12 +1052,12 @@ dd {
     gap: 5px;
     flex-direction: column;
   }
-  nav small,
-  nav .step-number {
+  nav small {
     display: none;
   }
   nav strong {
-    font-size: 9px;
+    font-size: 12px;
+    text-align: center;
   }
   nav svg {
     width: 17px;
@@ -1175,25 +1067,18 @@ dd {
     margin-left: 0;
     width: 100%;
   }
-  .topbar {
-    height: 50px;
-    padding: 0 20px;
-  }
-  .breadcrumb {
-    font-size: 10px;
-  }
   .save-indicator {
-    font-size: 9px;
+    font-size: 12px;
   }
   main {
     padding: 29px 18px;
   }
   h1 {
-    font-size: 32px;
-    letter-spacing: -1.5px;
+    font-size: 28px;
+    letter-spacing: -0.5px;
   }
   .section-title p {
-    font-size: 12px;
+    font-size: 13px;
   }
   .panel {
     padding: 20px;
@@ -1203,7 +1088,7 @@ dd {
   .follow-grid {
     grid-template-columns: 1fr;
   }
-  .guide ol {
+  .guide ul {
     grid-template-columns: 1fr;
     gap: 22px;
   }
@@ -1224,23 +1109,23 @@ dd {
     flex-wrap: wrap;
   }
   .coverage-strip strong {
-    font-size: 10px;
+    font-size: 12px;
   }
   .coverage-strip span {
     width: 100%;
     margin-left: 24px;
-    font-size: 9px;
+    font-size: 12px;
   }
   .camera-row {
     align-items: flex-start;
     flex-direction: column;
   }
   .clip-list .clip-status {
-    font-size: 9px;
+    font-size: 12px;
     max-width: 95px;
   }
   .section-title .eyebrow {
-    font-size: 9px;
+    font-size: 12px;
   }
   .screen summary > span {
     float: none;
@@ -1256,34 +1141,18 @@ dd {
     flex-wrap: wrap;
   }
   .view-tabs button {
-    font-size: 11px;
+    font-size: 13px;
   }
   .frame-controls span {
-    font-size: 9px;
+    font-size: 12px;
   }
   .footer-tools {
     gap: 6px 22px;
   }
 }
-@media (prefers-reduced-motion: no-preference) {
-  main > .section-title {
-    animation: enter 0.35s ease-out;
-  }
-  @keyframes enter {
-    from {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-}
 @media print {
   .no-print,
   .sidebar,
-  .topbar,
   .footer-actions {
     display: none !important;
   }
@@ -1326,7 +1195,7 @@ dd {
   margin: 4px 0 10px;
 }
 .chip {
-  font-size: 12px;
+  font-size: 13px;
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 2px 10px;
@@ -1384,7 +1253,7 @@ dd {
 .framing-label {
   position: absolute;
   left: 8%;
-  font-size: 12px;
+  font-size: 13px;
   color: #fff;
   background: rgba(19, 62, 53, 0.75);
   padding: 2px 8px;
@@ -1493,7 +1362,7 @@ dd {
   background: #b3261e;
   padding: 2px 10px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .trim-note {
@@ -1601,7 +1470,7 @@ dd {
 }
 .moment-figure figcaption {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
 }
@@ -1630,7 +1499,7 @@ dd {
   white-space: nowrap;
 }
 .range-head small {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
   color: var(--muted);
 }
@@ -1672,7 +1541,7 @@ dd {
   position: relative;
   height: 16px;
   margin-top: 3px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
 }
 .range-scale span {
@@ -1681,7 +1550,7 @@ dd {
 }
 .range p {
   margin: 2px 0 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .range.outside p {
   color: #8a3a1c;
@@ -1694,7 +1563,7 @@ dd {
 .range-notes,
 .review-note {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 14px;
   line-height: 1.55;
 }
 .review-note {
@@ -2050,4 +1919,27 @@ dd {
   .fit-numbers table {
     break-inside: avoid;
   }
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+label:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.recommendation-kind {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.recommendation.urgent .recommendation-kind,
+.recommendation.emergency .recommendation-kind {
+  color: #9a452c;
+}
+.view-name {
+  text-transform: capitalize;
+}
+.camera-row button {
+  white-space: nowrap;
 }
