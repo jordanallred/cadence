@@ -1761,7 +1761,8 @@ dd {
   }
 }
 @media print {
-  .comparison {
+  .compare-stills,
+  .compare-ranges > * {
     break-inside: avoid;
   }
 }
@@ -1992,7 +1993,7 @@ dd {
   .measure .how {
     display: none;
   }
-  .fit-numbers table {
+  .fit-numbers tr {
     break-inside: avoid;
   }
 }
@@ -2296,4 +2297,45 @@ label:focus-within {
   .range.compare .range-head {
     flex-wrap: wrap;
   }
+}
+@page {
+  margin: 14mm 12mm;
+}
+@media print {
+  h2,
+  h3,
+  .position-head {
+    break-after: avoid;
+  }
+  /* Keep each still beside its ranges so one stroke moment fits a page. */
+  .position-body,
+  .position-body[data-hidden="true"] {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 20px;
+  }
+  .moment-figure svg {
+    max-height: 105mm;
+  }
+}
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -60px;
+  z-index: 20;
+  background: var(--green);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 7px;
+  font-size: 14px;
+}
+.skip-link:focus {
+  top: 12px;
+}
+main:focus {
+  outline: none;
+}
+.phone-url {
+  user-select: all;
+  word-break: break-all;
+  color: var(--ink);
 }

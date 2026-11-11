@@ -93,7 +93,9 @@ export function PhoneLink({
             </p>
             <small className="muted">
               Phone and computer must be on the same network. If Windows asks,
-              allow Cadence on private networks.
+              allow Cadence on private networks. Camera won't scan? Type this
+              address into the phone's browser:{" "}
+              <span className="phone-url">{link.url}</span>
             </small>
           </div>
         </div>

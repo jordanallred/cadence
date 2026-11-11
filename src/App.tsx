@@ -159,6 +159,10 @@ export default function App() {
     setStep(n);
     setReview(null);
     window.scrollTo({ top: 0, behavior: "instant" });
+    // Screen readers start reading the new step, not the old focus.
+    requestAnimationFrame(() =>
+      document.getElementById("main")?.focus({ preventScroll: true }),
+    );
   };
   const replaceClip = (clip: ClipAnalysis) => {
     if (session)
@@ -251,11 +255,17 @@ export default function App() {
     }
   };
   if (!session) return <div className="loading">Loading your fits…</div>;
+  document.title =
+    (step === 1 && review ? "Check the tracking" : steps[step].title) +
+    " · Cadence";
   const selected = session.clips.find((c) => c.id === review),
     context = assessContext(session.intake, session.events),
     urgent = context.find((r) => r.urgency !== "routine");
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main">
+        Skip to {steps[step].title.toLowerCase()}
+      </a>
       <aside className="sidebar no-print" aria-label="Fit steps and saved fits">
         <a
           className="brand"
@@ -317,7 +327,7 @@ export default function App() {
         </div>
       </aside>
       <div className="main-shell">
-        <main>
+        <main id="main" tabIndex={-1}>
           {outdated && (
             <div role="alert">
               <Notice tone="warning">
