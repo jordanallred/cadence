@@ -37,6 +37,7 @@ import {
   exportAllWithVideos,
 } from "./storage/portable";
 import { Notice } from "./components/Fields";
+const SAVE_FAILED = "Could not save locally.";
 const steps = [
   {
     title: "Your starting point",
@@ -106,12 +107,12 @@ export default function App() {
             ...list.filter((s) => s.id !== snapshot.id),
           ]);
           setSaveState(savedWhere());
+          // A later good save means the earlier failure is over.
+          setError((e) => (e.startsWith(SAVE_FAILED) ? "" : e));
         })
         .catch((e) => {
           setSaveState("Not saved");
-          setError(
-            "Could not save locally. Download a backup now. " + String(e),
-          );
+          setError(SAVE_FAILED + " Download a backup now. " + String(e));
         });
     }, 350);
     return () => clearTimeout(timer);

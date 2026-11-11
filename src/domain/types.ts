@@ -14,24 +14,32 @@ export const viewSchema = z.enum(["left", "right", "front", "rear"]);
 export type View = z.infer<typeof viewSchema>;
 export type Point = z.infer<typeof pointSchema>;
 export type PoseFrame = z.infer<typeof frameSchema>;
+/**
+ * A body or bike measurement. The inputs only accept values in range, so an
+ * out-of-range number here is old or damaged data. It loads and saves as
+ * unknown instead of failing the whole fit: one bad field must never stop
+ * the rest of the fit from saving.
+ */
+const measured = (min: number, max: number) =>
+  z.number().min(min).max(max).nullable().default(null).catch(null);
 const intakeFields = z.object({
   name: z.string().max(120),
   bike: z.string().max(120),
   discipline: z.enum(["road", "gravel", "mountain", "stationary"]),
   goal: z.string().max(1000),
   experience: z.string().max(100),
-  saddleHeight: z.number().positive().max(1500).nullable(),
-  saddleSetback: z.number().min(-200).max(400).nullable(),
-  saddleTilt: z.number().min(-30).max(30).nullable(),
-  crankLength: z.number().min(80).max(250).nullable(),
+  saddleHeight: measured(1, 1500),
+  saddleSetback: measured(-200, 400),
+  saddleTilt: measured(-30, 30),
+  crankLength: measured(80, 250),
   // Added in rules 0.3.0. Older profiles load with these unknown.
-  riderHeight: z.number().min(100).max(230).nullable().default(null),
-  shoulderWidth: z.number().min(250).max(600).nullable().default(null),
-  barReach: z.number().min(300).max(900).nullable().default(null),
-  barDrop: z.number().min(-200).max(300).nullable().default(null),
-  stemLength: z.number().min(20).max(160).nullable().default(null),
-  barWidth: z.number().min(300).max(900).nullable().default(null),
-  cleatOffset: z.number().min(-40).max(60).nullable().default(null),
+  riderHeight: measured(100, 230),
+  shoulderWidth: measured(250, 600),
+  barReach: measured(300, 900),
+  barDrop: measured(-200, 300),
+  stemLength: measured(20, 160),
+  barWidth: measured(300, 900),
+  cleatOffset: measured(-40, 60),
   cockpit: z.string().max(1000),
   limitations: z.string().max(1500),
   symptom: z.enum([

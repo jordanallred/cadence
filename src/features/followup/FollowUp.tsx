@@ -35,9 +35,8 @@ export function FollowUp({
     [rideNotes, setRideNotes] = useState(""),
     [error, setError] = useState("");
   const active = activeExperiment(session),
-    blocked = results.some(
-      (r) => r.outcome === "assessment" || r.id === "screen",
-    ),
+    hold = results.find((r) => r.outcome === "assessment" || r.id === "screen"),
+    blocked = hold !== undefined,
     experiment = results.find((r) => r.outcome === "experiment");
   const revisions = revisionAfter(session);
   /** What the next recording showed after a change, in one line. */
@@ -74,11 +73,10 @@ export function FollowUp({
         </p>
       </div>
       {error && <Notice tone="warning">{error}</Notice>}
-      {blocked && (
+      {hold && (
         <Notice tone="warning">
-          Your report recommends assessment or more context before further
-          changes. You can still record feedback and revert an existing
-          experiment.
+          <strong>New changes are on hold: {hold.title}.</strong> {hold.action}{" "}
+          You can still record rides and revert an existing experiment.
         </Notice>
       )}
       <div className="follow-grid">
