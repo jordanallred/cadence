@@ -23,7 +23,8 @@ var sessionID = regexp.MustCompile(`^[A-Za-z0-9_-]{1,80}$`)
 
 type store struct {
 	mu  sync.Mutex
-	dir string // sessions/<id>.json and deleted/<id>
+	vmu sync.Mutex // guards renames and deletes in videos/
+	dir string     // sessions/<id>.json, deleted/<id>, videos/<clip id>.<ext>
 	err string
 }
 
@@ -33,7 +34,7 @@ func openStore() *store {
 		return &store{err: err.Error()}
 	}
 	dir := filepath.Join(base, "Cadence")
-	for _, d := range []string{"sessions", "deleted"} {
+	for _, d := range []string{"sessions", "deleted", "videos"} {
 		if err := os.MkdirAll(filepath.Join(dir, d), 0o700); err != nil {
 			return &store{err: err.Error()}
 		}
@@ -117,6 +118,10 @@ func (s *store) handle(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Cache-Control", "no-store")
 	if s.dir == "" {
 		http.Error(w, "Fit history folder unavailable: "+s.err, http.StatusServiceUnavailable)
+		return true
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/store/videos") {
+		s.handleVideo(w, r)
 		return true
 	}
 	s.mu.Lock()
