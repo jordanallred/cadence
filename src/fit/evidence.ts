@@ -1,4 +1,4 @@
-export const RULE_VERSION = "0.5.0";
+export const RULE_VERSION = "0.5.1";
 export const evidence: Record<
   string,
   { title: string; url: string; limit: string }

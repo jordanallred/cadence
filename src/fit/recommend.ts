@@ -1,3 +1,4 @@
+import { ratedWorse } from "./ratings";
 import type {
   Intake,
   ClipAnalysis,
@@ -148,7 +149,7 @@ function settle<T extends string>(
  * Settings that made riding worse, as "estimateSetting:direction", plus an
  * undo card when the change is still in place.
  */
-function pastChanges(events: FitEvent[]) {
+function pastChanges(events: FitEvent[], intake: Intake) {
   const avoid = new Set<string>();
   let undo: Recommendation | undefined;
   const closed = new Set(
@@ -157,11 +158,14 @@ function pastChanges(events: FitEvent[]) {
       .map((e) => e.experimentId),
   );
   for (const a of events.filter((e) => e.kind === "adjustment")) {
-    const worse = events.some(
+    const worseRide = events.some(
       (e) =>
         e.kind === "ride" && e.response === "worse" && e.experimentId === a.id,
     );
-    if (!worse) continue;
+    // A symptom rated 2 or more points worse on a ride with the change
+    // counts the same as a ride marked worse.
+    const worseRating = !worseRide && ratedWorse(events, intake, a);
+    if (!worseRide && !worseRating) continue;
     const up =
       a.before != null && a.after != null ? a.after > a.before : undefined;
     if (up !== undefined)
@@ -196,7 +200,9 @@ function pastChanges(events: FitEvent[]) {
         "undo",
         "experiment",
         "Undo your last change",
-        `You logged a ride as worse after: ${a.detail}`,
+        worseRide
+          ? `You logged a ride as worse after: ${a.detail}`
+          : `A symptom you rated got worse after: ${a.detail}`,
         known && m
           ? `Put the ${m.label.toLowerCase()} back to ${a.before} ${m.unit}, ride twice to check you are back to where you started, then mark the change as reverted in Ride & refine. It will not be suggested again.`
           : "Put the setting back the way it was, ride twice to check you are back to where you started, then mark the change as reverted in Ride & refine.",
@@ -303,7 +309,7 @@ export function recommend(
       order,
     });
   };
-  const history = pastChanges(events);
+  const history = pastChanges(events, i);
   if (history.undo) push(ORDER.undo, history.undo, [], true);
 
   // 0. Cleat fore-aft. The foot is the base of the fit, so it comes first

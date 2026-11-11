@@ -83,8 +83,12 @@ export function FollowUp({
     blocked = hold !== undefined,
     experiment = results.find((r) => r.outcome === "experiment");
   const outcome = active && outcomeOf(session, active);
+  // Keep needs a better ride or a Helped verdict, and never while the
+  // evidence is mixed or says worse.
   const betterRide =
     !!active &&
+    outcome?.verdict !== "mixed" &&
+    outcome?.verdict !== "worse" &&
     (outcome?.verdict === "helped" ||
       session.events.some(
         (e) =>
@@ -185,8 +189,9 @@ export function FollowUp({
               </div>
               {!betterRide && !blocked && (
                 <p className="muted keep-hint" id="keep-needs-ride">
-                  Keep becomes available once a ride with this change feels
-                  better than before, or your symptom ratings drop.
+                  {outcome?.verdict === "mixed" || outcome?.verdict === "worse"
+                    ? "Keep is not available while the rides and ratings say mixed or worse."
+                    : "Keep becomes available once a ride with this change feels better than before, or after two rides with your symptom ratings down."}
                 </p>
               )}
               {outcome && (
