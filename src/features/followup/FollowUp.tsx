@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { RotateCcw, Check, Plus } from "lucide-react";
-import type { Session, FitEvent, Recommendation } from "../../domain/types";
+import type {
+  Session,
+  FitEvent,
+  Recommendation,
+  SymptomRating,
+} from "../../domain/types";
 import { activeExperiment, appendEvent } from "../../fit/history";
-import { Field, Notice } from "../../components/Fields";
-import {
-  compareSetups,
-  describeChange,
-  headline,
-  headlineText,
-  revisionAfter,
-} from "../../fit/compare";
+import { Check as Confirm, Field, Notice } from "../../components/Fields";
+import { describeChange } from "../../fit/compare";
+import { latestRatings, outcomeOf } from "../../fit/outcome";
+import { firstStep } from "../../fit/loop";
+import { symptomName } from "../../fit/symptoms";
+import { OutcomeCard } from "./OutcomeCard";
 import { loggedSettings, measurement } from "../../fit/measurements";
 import { holdOf } from "../../fit/assessment";
 /** The setting a recommended change is logged under. */
@@ -27,6 +30,7 @@ const LOGGED_AS: Partial<
   barWidth: "barWidth",
   cleat: "cleatOffset",
 };
+const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 const EVENT_NAME: Record<FitEvent["kind"], string> = {
   adjustment: "Change",
   revert: "Reverted",
@@ -52,40 +56,42 @@ export function FollowUp({
   onReport: () => void;
 }) {
   const suggested = results.find((r) => r.outcome === "experiment");
+  const first = firstStep(suggested, session);
   const [setting, setSetting] = useState<NonNullable<FitEvent["setting"]>>(
       suggested?.estimate
         ? (LOGGED_AS[suggested.estimate.setting] ?? "other")
         : "saddleHeight",
     ),
-    [after, setAfter] = useState(""),
-    [detail, setDetail] = useState(suggested?.title ?? ""),
+    [after, setAfter] = useState(first ? String(first.after) : ""),
+    // The decision notes of an active experiment start empty.
+    [detail, setDetail] = useState(
+      activeExperiment(session) ? "" : (suggested?.title ?? ""),
+    ),
     [duration, setDuration] = useState("45"),
     [intensity, setIntensity] = useState<"easy" | "moderate" | "hard">("easy"),
     [comfort, setComfort] = useState(5),
     [response, setResponse] = useState<"better" | "same" | "worse">("same"),
     [rideNotes, setRideNotes] = useState(""),
-    [error, setError] = useState("");
+    [ratings, setRatings] = useState<SymptomRating[]>(() =>
+      latestRatings(session),
+    ),
+    [error, setError] = useState(""),
+    // Asked here, where the change is made, if Your starting point skipped it.
+    [askLimits] = useState(!session.intake.mechanicalLimits);
   const active = activeExperiment(session),
     hold = holdOf(results),
     blocked = hold !== undefined,
     experiment = results.find((r) => r.outcome === "experiment");
-  const revisions = revisionAfter(session);
-  /** What the next recording showed after a change, in one line. */
-  const result = (e: FitEvent) => {
-    const rev = revisions.get(e.id);
-    const cmp = rev === undefined ? undefined : compareSetups(session, rev);
-    const top = cmp && headline(cmp.metrics);
-    return top ? headlineText(top) : undefined;
-  };
-  const activeResult = active && result(active);
+  const outcome = active && outcomeOf(session, active);
   const betterRide =
     !!active &&
-    session.events.some(
-      (e) =>
-        e.kind === "ride" &&
-        e.experimentId === active.id &&
-        e.response === "better",
-    );
+    (outcome?.verdict === "helped" ||
+      session.events.some(
+        (e) =>
+          e.kind === "ride" &&
+          e.experimentId === active.id &&
+          e.response === "better",
+      ));
   const needsRestoreNote =
     !!active && (active.before == null || active.setting === "other");
   const add = (e: Omit<FitEvent, "id" | "at">) => {
@@ -179,18 +185,14 @@ export function FollowUp({
               </div>
               {!betterRide && !blocked && (
                 <p className="muted keep-hint" id="keep-needs-ride">
-                  Keep becomes available once you save a ride with this change
-                  that felt better than before.
+                  Keep becomes available once a ride with this change feels
+                  better than before, or your symptom ratings drop.
                 </p>
               )}
-              {activeResult ? (
-                <p className="compare-summary">
-                  {activeResult}{" "}
-                  <button className="text-button" onClick={onReport}>
-                    See before and after
-                  </button>
-                </p>
-              ) : (
+              {outcome && (
+                <OutcomeCard outcome={outcome} onCompare={onReport} />
+              )}
+              {!outcome?.video && (
                 <button className="text-button" onClick={onRecord}>
                   Record your updated position
                 </button>
@@ -237,7 +239,14 @@ export function FollowUp({
                       value={session.intake[setting] ?? "Unknown"}
                     />
                   </Field>
-                  <Field label="New measured setting">
+                  <Field
+                    label="New measured setting"
+                    hint={
+                      first && first.setting === setting
+                        ? "Filled in from the suggested first step. Measure after the change and correct it if needed."
+                        : undefined
+                    }
+                  >
                     <input
                       type="number"
                       step="any"
@@ -255,6 +264,18 @@ export function FollowUp({
                   placeholder="Record the exact change, reference and reason."
                 />
               </Field>
+              {askLimits && (
+                <Confirm
+                  label="I checked adjustment limits and torque instructions, and have the right tools"
+                  checked={session.intake.mechanicalLimits}
+                  onChange={(v) =>
+                    onChange({
+                      ...session,
+                      intake: { ...session.intake, mechanicalLimits: v },
+                    })
+                  }
+                />
+              )}
               <button
                 className="primary full"
                 disabled={
@@ -272,6 +293,7 @@ export function FollowUp({
                       before:
                         setting === "other" ? null : session.intake[setting],
                       after: setting === "other" ? null : Number(after),
+                      ...(ratings.length ? { symptoms: ratings } : {}),
                     })
                   ) {
                     setDetail("");
@@ -285,7 +307,7 @@ export function FollowUp({
               {!blocked && (
                 <small className="start-hint">
                   {!session.intake.mechanicalLimits
-                    ? "Confirm mechanical limits and tools in Your starting point first."
+                    ? "Confirm the adjustment limits above first."
                     : setting !== "other" && !after
                       ? "Enter the new setting you measured after the change."
                       : !detail.trim()
@@ -336,16 +358,49 @@ export function FollowUp({
               onChange={(e) => setComfort(+e.target.value)}
             />
           </Field>
-          <Field label="Compared with before">
-            <select
-              value={response}
-              onChange={(e) => setResponse(e.target.value as typeof response)}
-            >
-              <option value="better">Better</option>
-              <option value="same">About the same</option>
-              <option value="worse">Worse</option>
-            </select>
-          </Field>
+          {active && (
+            <Field label="Compared with before the change">
+              <select
+                value={response}
+                onChange={(e) => setResponse(e.target.value as typeof response)}
+              >
+                <option value="better">Better</option>
+                <option value="same">About the same</option>
+                <option value="worse">Worse</option>
+              </select>
+            </Field>
+          )}
+          {ratings.length > 0 && (
+            <fieldset className="ratings">
+              <legend>
+                How did each symptom feel on this ride?
+                <small>0 = gone, 10 = worst imaginable</small>
+              </legend>
+              {ratings.map((r, n) => {
+                const name = symptomName({ ...r, severity: 1, warning: false });
+                return (
+                  <label key={r.area + r.side} className="rating">
+                    <span>{cap(name)}</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="10"
+                      value={r.severity}
+                      aria-valuetext={`${r.severity} out of 10`}
+                      onChange={(e) =>
+                        setRatings(
+                          ratings.map((x, k) =>
+                            k === n ? { ...x, severity: +e.target.value } : x,
+                          ),
+                        )
+                      }
+                    />
+                    <output>{r.severity}</output>
+                  </label>
+                );
+              })}
+            </fieldset>
+          )}
           <Field label="Ride notes">
             <textarea
               maxLength={3000}
@@ -365,8 +420,9 @@ export function FollowUp({
                   duration: Number(duration),
                   intensity,
                   comfort,
-                  response,
+                  ...(active ? { response } : {}),
                   experimentId: active?.id,
+                  ...(ratings.length ? { symptoms: ratings } : {}),
                 })
               )
                 setRideNotes("");
@@ -395,12 +451,21 @@ export function FollowUp({
                   </span>
                   <h3>
                     {e.kind === "ride"
-                      ? `${e.duration} min ${e.intensity} ride, ${RESPONSE[e.response ?? "same"]}`
+                      ? `${e.duration} min ${e.intensity} ride${e.response ? ", " + RESPONSE[e.response] : ""}`
                       : e.detail || EVENT_NAME[e.kind]}
                   </h3>
                   {e.kind === "ride" && (
                     <p>
-                      Comfort {e.comfort}/10{e.detail ? `. ${e.detail}` : ""}
+                      Comfort {e.comfort}/10
+                      {e.symptoms?.length
+                        ? `. ${e.symptoms
+                            .map(
+                              (r) =>
+                                `${cap(symptomName({ ...r, severity: 1, warning: false }))} ${r.severity}/10`,
+                            )
+                            .join(", ")}`
+                        : ""}
+                      {e.detail ? `. ${e.detail}` : ""}
                     </p>
                   )}
                   {(e.kind === "adjustment" || e.kind === "revert") && (
@@ -408,8 +473,13 @@ export function FollowUp({
                       {(e.kind === "revert" ||
                         (e.setting && e.setting !== "other")) &&
                         describeChange(e, session)}
-                      {result(e) && (
-                        <span className="compare-result">{result(e)}</span>
+                      {e.kind === "adjustment" && (
+                        <span className="compare-result">
+                          {outcomeOf(session, e).title}
+                          {outcomeOf(session, e).video
+                            ? `. ${outcomeOf(session, e).video!.text}`
+                            : ""}
+                        </span>
                       )}
                     </small>
                   )}
