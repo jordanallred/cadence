@@ -47,16 +47,19 @@ const overlap = (
 ) =>
   Math.max(0, a.half + b.half - Math.abs(a.x - b.x)) *
   Math.max(0, a.halfHeight + b.halfHeight - Math.abs(a.y - b.y));
-/** Distance from point p to segment ab. */
-const toSegment = (p: Vec, a: Vec, b: Vec) => {
-  const dx = b.x - a.x,
-    dy = b.y - a.y;
-  const t = clamp(
-    ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1),
-    0,
-    1,
-  );
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+/** Whether segment ab passes through a centred box (sampled). */
+const crosses = (
+  box: { x: number; y: number; half: number; halfHeight: number },
+  a: Vec,
+  b: Vec,
+) => {
+  for (let k = 0; k <= 16; k++) {
+    const x = a.x + ((b.x - a.x) * k) / 16,
+      y = a.y + ((b.y - a.y) * k) / 16;
+    if (Math.abs(x - box.x) < box.half && Math.abs(y - box.y) < box.halfHeight)
+      return true;
+  }
+  return false;
 };
 
 /**
@@ -77,7 +80,19 @@ export function placeLabels(
   const r = size * 0.045;
   const halfHeight = font * 0.7;
   const joints = limbs.flat();
-  const segments = limbs.flatMap((l) => l.slice(1).map((b, n) => [l[n], b]));
+  // Limbs and the dashed reference rays drawn from each angle.
+  const segments = [
+    ...limbs.flatMap((l) => l.slice(1).map((b, n) => [l[n], b])),
+    ...angles
+      .filter((a) => a.reference)
+      .map((a) => {
+        const u = unit(a.from);
+        return [
+          a.at,
+          { x: a.at.x + u.x * size * 0.11, y: a.at.y + u.y * size * 0.11 },
+        ];
+      }),
+  ];
   const placed: PlacedLabel[] = [];
   for (const a of angles) {
     const u = unit(a.from),
@@ -122,8 +137,7 @@ export function placeLabels(
             Math.abs(j.y - at.y) < halfHeight + font * 0.3
           )
             cost += 20;
-        for (const [s, e] of segments)
-          if (toSegment(at, s, e) < halfHeight) cost += 4;
+        for (const [s, e] of segments) if (crosses(box, s, e)) cost += 4;
         if (cost < bestCost) {
           bestCost = cost;
           best = { ...base, ...at };

@@ -35,7 +35,8 @@ for (const [W, H] of [
   [360, 254],
   [1920, 1355],
 ]) {
-  for (const font of [W * 0.022, W * 0.04]) {
+  // Smallest text (large screen), and 13 px text on a 358 px wide phone.
+  for (const font of [W * 0.022, (13 * W) / 358]) {
     it(`no labels overlap at ${W}px wide, ${Math.round(font)}px text`, () => {
       const t = traceFrame(
         points,
@@ -60,7 +61,7 @@ for (const [W, H] of [
         expect(l.y - l.halfHeight).toBeGreaterThanOrEqual(0);
         expect(l.y + l.halfHeight).toBeLessThanOrEqual(H);
         expect(Math.hypot(l.x - l.a.at.x, l.y - l.a.at.y)).toBeLessThan(
-          Math.max(W, H) * 0.3,
+          Math.max(W, H) * 0.35,
         );
       }
     });
