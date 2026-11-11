@@ -329,6 +329,8 @@ export const recommendationSchema = z.object({
   targets: z.array(symptomAreaSchema).optional(),
   /** Milder symptoms that pointed the other way and were outweighed. */
   against: z.array(symptomAreaSchema).optional(),
+  /** Why they lost: a video measurement, or a worse symptom. */
+  againstBy: z.enum(["measurement", "severity"]).optional(),
 });
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export const eventSchema = z.object({

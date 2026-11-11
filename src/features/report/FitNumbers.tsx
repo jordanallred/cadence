@@ -199,16 +199,19 @@ export function fitRows(
               next: "No change while you are comfortable",
               basis: r!.observations,
             }
-          : sideAngles
-            ? {
-                tone: "keep" as const,
-                next: "Keep",
-                basis: "Arm and shoulder angles are inside the practice range.",
-              }
-            : {
-                tone: "missing" as const,
-                next: "Needs a reviewed side view with arms visible",
-              }),
+          : r
+            ? { tone: "keep" as const, next: r.title, basis: r.observations }
+            : sideAngles
+              ? {
+                  tone: "keep" as const,
+                  next: "Keep",
+                  basis:
+                    "Arm and shoulder angles are inside the practice range.",
+                }
+              : {
+                  tone: "missing" as const,
+                  next: "Needs a reviewed side view with arms visible",
+                }),
     });
     const check = dropCheck(i);
     const pop = check

@@ -77,7 +77,13 @@ export function SymptomPlan({
                       )
                       .join(" and ")}{" "}
                     {outweighed.length > 1 ? "go" : "goes"} the other way
-                    because a worse symptom leads. Stop if this one gets worse.
+                    because{" "}
+                    {outweighed.every((r) => r.againstBy === "measurement")
+                      ? "the video measurement leads"
+                      : outweighed.some((r) => r.againstBy === "measurement")
+                        ? "the video measurement or a worse symptom leads"
+                        : "a worse symptom leads"}
+                    . Stop if this one gets worse.
                   </p>
                 )}
                 <p className="symptom-also">{a.also}</p>

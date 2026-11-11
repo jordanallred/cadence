@@ -3,6 +3,7 @@ import { recommend } from "../src/fit/recommend";
 import { holdOf } from "../src/fit/assessment";
 import { AREAS } from "../src/fit/symptoms";
 import { evidence } from "../src/fit/evidence";
+import { fitRows } from "../src/features/report/FitNumbers";
 import {
   defaultIntake,
   intakeSchema,
@@ -322,4 +323,31 @@ it("loads symptom entries saved by v0.6.2", () => {
     { area: "foot-numb", side: "right", severity: 4, warning: false },
   ]);
   expect(i.onset).toBe("After 40 min");
+});
+
+it("a tucked-arm measurement beats a mild symptom wanting a shorter reach", () => {
+  const i = { ...rider, symptoms: [sym("hand-numb", 1)] };
+  const clip = side([
+    m("knee-min", 35),
+    m("shoulder-angle", 67),
+    m("torso", 40),
+  ]);
+  const r = recommend(i, [clip], []);
+  const reach = r.find((x) => x.id === "reach")!;
+  expect(reach.outcome).toBe("experiment");
+  expect(reach.estimate?.direction).toBe("longer");
+  expect(reach.against).toContain("hand-numb");
+  expect(reach.againstBy).toBe("measurement");
+  const row = fitRows(i, r, clip).find((x) => x.name === "Reach (stem)")!;
+  expect(row.tone).toBe("change");
+  expect(row.basis ?? "").not.toContain("inside the practice range");
+});
+
+it("a symptom outweighed by the measured knee angle says so", () => {
+  const r = recommend(
+    { ...rider, symptoms: [sym("knee-front", 9)] },
+    [side([m("knee-min", 22)])],
+    [],
+  );
+  expect(r.find((x) => x.id === "saddle")?.againstBy).toBe("measurement");
 });

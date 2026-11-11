@@ -289,6 +289,7 @@ export function recommend(
     vs: Vote[],
     measured = false,
     lost: Vote[] = [],
+    lostTo: "measurement" | "severity" = "severity",
   ) => {
     const t = areas(vs),
       against = areas(lost).filter((a) => !t.includes(a));
@@ -296,7 +297,7 @@ export function recommend(
       rec: {
         ...rec,
         ...(t.length ? { targets: [...(rec.targets ?? []), ...t] } : {}),
-        ...(against.length ? { against } : {}),
+        ...(against.length ? { against, againstBy: lostTo } : {}),
       },
       measured,
       order,
@@ -581,6 +582,7 @@ export function recommend(
         agree,
         true,
         against,
+        "measurement",
       );
     } else if (inside && (up.length || down.length)) {
       // In range: symptoms may move it within the range, never out of it.
@@ -1031,20 +1033,7 @@ export function recommend(
       const seen = reachSigns.length
         ? `From the side view, ${reachSigns.join(" and ")}.`
         : "Your arm angles are within practice range.";
-      if (reachDir === "longer" && shorter.length)
-        push(
-          ORDER.reach,
-          advice(
-            "reach",
-            "no-change",
-            "Keep your stem length",
-            `${seen} A shorter cockpit would tuck you further, so it is not the fix for your ${listed(shorter)}. The bar height and saddle changes above cover it.`,
-            "Keep the stem.",
-            { ...common, sources: ["product"] },
-          ),
-          shorter,
-        );
-      else if (reachDir === "longer") {
+      if (reachDir === "longer") {
         const step = reach?.stemStep ?? 10;
         push(
           ORDER.reach,
@@ -1052,7 +1041,7 @@ export function recommend(
             "reach",
             comfortable ? "no-change" : "experiment",
             "Your cockpit may be short",
-            `${seen}${comfortable ? " You report no discomfort, so this is for information." : ""}`,
+            `${seen}${comfortable ? " You report no discomfort, so this is for information." : ""}${shorter.length ? ` Your ${listed(shorter)} usually points to a shorter reach, but the video measures your arms as tucked, so the measurement leads. Take one 10 mm step only and go back if it gets worse.` : ""}`,
             comfortable
               ? "No change needed while you are comfortable."
               : reach
@@ -1074,6 +1063,8 @@ export function recommend(
           ),
           [],
           !comfortable,
+          shorter,
+          "measurement",
         );
       } else {
         const act = shorter.length > 0 || !comfortable;
