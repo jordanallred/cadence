@@ -35,6 +35,9 @@ jobs:
         env:
           CADENCE_VERSION: ${{ inputs.tag || github.ref_name }}
         run: npm run build:desktop -- --all
+      - run: npx playwright install --with-deps chromium
+      - name: End-to-end test with real pedaling video
+        run: npm run e2e
       - name: Package
         run: |
           cd release

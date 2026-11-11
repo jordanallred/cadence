@@ -24,6 +24,8 @@ To build the single-file launcher yourself (needs Go 1.22+): `npm run build` the
 
 Use `Start-Cadence.ps1` for a guided local launch. Stop the terminal with Ctrl+C when done. Run `npm test` and `npm run build` to verify; `npm run preview` serves the build. In the development server, keep the same hostname and port to see the same browser storage; the desktop launcher also saves fit history to disk.
 
+After `npm run build:desktop`, run `npm run e2e` to analyze real pedaling videos (`tests/e2e/videos/`) in a real browser against the built launcher. Set `CADENCE_BIN` to test a downloaded release instead. CI and the release workflow run it too, so a release cannot ship if the pose engine fails to load.
+
 ## Workflow
 
 1. Fill in the profile, symptom check and known baseline settings. Unknown measurements stay blank.
