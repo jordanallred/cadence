@@ -55,3 +55,32 @@ describe("fit history on disk", () => {
     expect(() => parseBackup("not json")).toThrow(/not a Cadence backup/);
   });
 });
+
+describe("fit size (#8)", () => {
+  it("the largest realistic fit fits under the save limit", async () => {
+    const { MAX_FIT_BYTES } = await import("../src/storage/portable");
+    // 40 clips of 30 s at 30 Hz with corrected tracking (two copies of
+    // the frames) and two report stills each, landmarks as saved now.
+    const frames = Array.from({ length: 900 }, (_, n) => ({
+      timeMs: n * 33,
+      people: 1,
+      points: Array.from({ length: 33 }, () => ({
+        x: 0.5123,
+        y: 0.4567,
+        visibility: 0.987,
+      })),
+    }));
+    const still = "data:image/jpeg;base64," + "A".repeat(299_000);
+    const clip = {
+      frames,
+      originalFrames: frames,
+      keyframes: [
+        { position: "extension", timeMs: 1, image: still },
+        { position: "top", timeMs: 2, image: still },
+      ],
+    };
+    const size = JSON.stringify({ clips: Array(40).fill(clip) }).length;
+    expect(size).toBeGreaterThan(30 << 20);
+    expect(size).toBeLessThan(MAX_FIT_BYTES * 0.8);
+  });
+});

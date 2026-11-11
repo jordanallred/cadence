@@ -4,22 +4,10 @@ import type {
   Intake,
   KeyMoment,
   Metric,
-  Point,
 } from "../../domain/types";
 import { describeRange, targetRange, type TargetRange } from "../../fit/ranges";
 
-type Vec = { x: number; y: number };
-type Angle = {
-  /** Short name drawn on the frame. */
-  name: string;
-  value: number;
-  at: Vec;
-  /** Directions of the two rays, from `at`. */
-  from: Vec;
-  to: Vec;
-  /** Dashed reference ray (a straight limb or the horizontal), if any. */
-  reference?: "from";
-};
+import { placeLabels, traceFrame, type Vec } from "./labels";
 
 export const MOMENTS: Record<
   KeyMoment["position"],
@@ -192,72 +180,16 @@ export function MomentFigure({
     watch.observe(el);
     return () => watch.disconnect();
   }, []);
-  const off = clip.view === "right" ? 1 : 0;
   const W = clip.width,
     H = clip.height;
-  const at = (j: number): Vec | undefined => {
-    const p: Point | undefined = frame.points[j];
-    return p && p.visibility >= 0.3 ? { x: p.x * W, y: p.y * H } : undefined;
-  };
-  const hip = at(23 + off),
-    knee = at(25 + off),
-    ankle = at(27 + off),
-    shoulder = at(11 + off),
-    elbow = at(13 + off),
-    wrist = at(15 + off);
-  const value = (id: string) => clip.metrics.find((m) => m.id === id)?.value;
-  const sub = (a: Vec, b: Vec) => ({ x: a.x - b.x, y: a.y - b.y });
-  const angles: Angle[] = [];
-  const flexion = (name: string, id: string, a?: Vec, b?: Vec, c?: Vec) => {
-    const v = value(id);
-    if (a && b && c && v !== undefined)
-      angles.push({
-        name,
-        value: v,
-        at: b,
-        from: sub(b, a),
-        to: sub(c, b),
-        reference: "from",
-      });
-  };
-  const limbs: Vec[][] = [];
-  if (hip && knee && ankle) limbs.push([hip, knee, ankle]);
-  if (hip && shoulder) limbs.push([hip, shoulder]);
-  if (shoulder && elbow && wrist) limbs.push([shoulder, elbow, wrist]);
-  if (moment.position === "extension") {
-    flexion("Knee", "knee-min", hip, knee, ankle);
-    flexion("Elbow", "elbow", shoulder, elbow, wrist);
-    const torso = value("torso");
-    if (hip && shoulder && torso !== undefined)
-      angles.push({
-        name: "Torso",
-        value: torso,
-        at: hip,
-        from: { x: Math.sign(shoulder.x - hip.x) || 1, y: 0 },
-        to: sub(shoulder, hip),
-        reference: "from",
-      });
-    const sh = value("shoulder-angle");
-    if (hip && shoulder && elbow && sh !== undefined)
-      angles.push({
-        name: "Shoulder",
-        value: sh,
-        at: shoulder,
-        from: sub(hip, shoulder),
-        to: sub(elbow, shoulder),
-      });
-  } else {
-    flexion("Knee", "knee-max", hip, knee, ankle);
-    const hp = value("hip");
-    if (hip && shoulder && knee && hp !== undefined)
-      angles.push({
-        name: "Hip",
-        value: hp,
-        at: hip,
-        from: sub(shoulder, hip),
-        to: sub(knee, hip),
-      });
-  }
+  const { angles, limbs, joints } = traceFrame(
+    frame.points,
+    clip.view,
+    moment.position,
+    (id) => clip.metrics.find((m) => m.id === id)?.value,
+    W,
+    H,
+  );
   const size = Math.max(W, H);
   // Image units per screen pixel.
   const px = shownWidth ? W / shownWidth : size / 900;
@@ -267,45 +199,7 @@ export function MomentFigure({
     const l = Math.hypot(v.x, v.y) || 1;
     return { x: v.x / l, y: v.y / l };
   };
-  const clamp = (v: number, lo: number, hi: number) =>
-    Math.max(lo, Math.min(hi, v));
-  // Place each label outside its angle, then push apart any that overlap
-  // (shoulder and torso labels often land on top of each other).
-  const lineHeight = font * 1.6;
-  const labelled = angles.map((a) => {
-    const r = size * 0.045;
-    const u = unit(a.from),
-      v = unit(a.to);
-    const mid = unit({ x: u.x + v.x, y: u.y + v.y });
-    const reach = r + font * 1.9;
-    const text = `${a.name} ${Math.round(a.value)}°`;
-    return {
-      a,
-      r,
-      p: { x: a.at.x + u.x * r, y: a.at.y + u.y * r },
-      q: { x: a.at.x + v.x * r, y: a.at.y + v.y * r },
-      sweep: u.x * v.y - u.y * v.x > 0 ? 1 : 0,
-      x: a.at.x + mid.x * reach,
-      y: a.at.y + mid.y * reach,
-      half: (text.length * font * 0.58) / 2,
-    };
-  });
-  for (let pass = 0; pass < 6; pass++)
-    for (let i = 0; i < labelled.length; i++)
-      for (let j = i + 1; j < labelled.length; j++) {
-        const A = labelled[i],
-          B = labelled[j];
-        const overlapX = A.half + B.half - Math.abs(A.x - B.x),
-          overlapY = lineHeight - Math.abs(A.y - B.y);
-        if (overlapX <= 0 || overlapY <= 0) continue;
-        const dir = B.y >= A.y ? 1 : -1;
-        A.y -= (dir * overlapY) / 2;
-        B.y += (dir * overlapY) / 2;
-      }
-  for (const l of labelled) {
-    l.x = clamp(l.x, l.half + font * 0.3, W - l.half - font * 0.3);
-    l.y = clamp(l.y, font, H - font);
-  }
+  const labelled = placeLabels(angles, limbs, W, H, font);
   const description = angles
     .map((a) => `${a.name} ${Math.round(a.value)} degrees`)
     .join(", ");
@@ -348,7 +242,7 @@ export function MomentFigure({
             </g>
           );
         })}
-        {labelled.map(({ a, p, q, r, sweep, x, y }) => (
+        {labelled.map(({ a, text, p, q, r, sweep, x, y }) => (
           <g key={a.name}>
             <path
               d={`M ${p.x} ${p.y} A ${r} ${r} 0 0 ${sweep} ${q.x} ${q.y}`}
@@ -363,11 +257,11 @@ export function MomentFigure({
               textAnchor="middle"
               dominantBaseline="middle"
             >
-              {a.name} {Math.round(a.value)}°
+              {text}
             </text>
           </g>
         ))}
-        {[hip, knee, ankle, shoulder, elbow, wrist].map(
+        {joints.map(
           (p, n) =>
             p && (
               <circle

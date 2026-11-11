@@ -34,15 +34,16 @@ it("rejects an empty recording", () =>
       (x) => x.severity === "reject",
     ),
   ).toBe(true));
-it("rejects multiple riders", () =>
-  expect(
-    measureClip(
-      syntheticFrames().map((f) => ({ ...f, people: 2 })),
-      "front",
-      1920,
-      1080,
-    ).quality.some((x) => x.severity === "reject"),
-  ).toBe(true));
+it("measures the rider when someone else is in the shot, with a note", () => {
+  const q = measureClip(
+    syntheticFrames().map((f) => ({ ...f, people: 2 })),
+    "front",
+    1920,
+    1080,
+  ).quality;
+  expect(q.some((x) => x.severity === "reject")).toBe(false);
+  expect(q.find((x) => x.code === "people")?.severity).toBe("warning");
+});
 it("rejects hidden required joints", () =>
   expect(
     measureClip(

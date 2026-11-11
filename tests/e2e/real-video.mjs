@@ -159,12 +159,35 @@ try {
   check(
     b.trim[0] >= 5.5,
     `auto-trim leaves out the still part (starts at ${b.trim[0]} s, pedaling starts at 6 s)`,
-    14,
   );
   check(
     b.cycles >= 13,
     `auto-trimmed clip analyzes (${b.cycles} pedal strokes, expected ≥ 13)`,
-    14,
+  );
+
+  // The original, uncropped clip: a life-size cardboard cutout of a person
+  // stands against the wall behind the bike. Cadence must follow the rider
+  // and still find the same cadence.
+  console.log("side-trainer-cutout.mp4");
+  const c = await analyze(page, "side-trainer-cutout.mp4");
+  check(
+    c.trim[0] <= 1 && c.trim[1] >= 14,
+    `auto-trim works with a cutout in the shot (${c.trim.join("–")} s)`,
+  );
+  check(
+    c.cycles >= 15 && c.cycles <= 19,
+    `pedal strokes with a cutout in the shot ${c.cycles} (expected 15–19)`,
+  );
+  // The rider speeds up from about 67 to 84 rpm in this clip, so one stroke
+  // found a frame (67 ms) later moves the median-period cadence by ~4 rpm.
+  // Following the cutout instead would break the count or the numbers.
+  check(
+    Math.abs(c.cadence - a.cadence) <= 5,
+    `cadence with a cutout in the shot ${c.cadence} rpm (cropped clip ${a.cadence})`,
+  );
+  check(
+    Math.abs(c.kneeExtension - a.kneeExtension) <= 3,
+    `knee extension matches the cropped clip (${c.kneeExtension}° vs ${a.kneeExtension}°)`,
   );
 
   await page.waitForTimeout(2000);

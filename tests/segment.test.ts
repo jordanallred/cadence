@@ -63,3 +63,25 @@ it("returns nothing when there is no steady pedaling", () => {
   ]);
   expect(pickSegment(frames, "left", duration)).toBeNull();
 });
+it("leaves out sitting still before pedaling (#14)", () => {
+  // Hands-free recording: the rider sits on the bike, still, then pedals.
+  const { frames, duration } = session([
+    { seconds: 6, kind: "still" },
+    { seconds: 15, kind: "pedal" },
+  ]);
+  const s = pickSegment(frames, "left", duration)!;
+  expect(s).not.toBeNull();
+  expect(s.start).toBeGreaterThanOrEqual(5.6);
+  expect(s.start).toBeLessThanOrEqual(6.2);
+  expect(s.end).toBeGreaterThan(19.5);
+});
+it("leaves out stopping at the end", () => {
+  const { frames, duration } = session([
+    { seconds: 14, kind: "pedal" },
+    { seconds: 6, kind: "still" },
+  ]);
+  const s = pickSegment(frames, "left", duration)!;
+  expect(s.start).toBeLessThanOrEqual(0.5);
+  expect(s.end).toBeLessThanOrEqual(14.4);
+  expect(s.end).toBeGreaterThanOrEqual(13);
+});

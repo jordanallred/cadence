@@ -1,13 +1,17 @@
 import { sessionSchema, type Session } from "../domain/types";
 import { isZip, makeZip, readZip } from "./zip";
 const BUNDLE = "cadence-backup";
+/** Largest single fit; matches maxSessionBytes in desktop/store.go. */
+export const MAX_FIT_BYTES = 256 << 20;
+/** Largest all-fits backup, near what a browser can hold as one string. */
+const MAX_BUNDLE_BYTES = 500_000_000;
 /** A backup file holds one fit, or every fit (format "cadence-backup"). */
 export function parseBackup(text: string): {
   all: boolean;
   sessions: Session[];
 } {
-  if (text.length > 200_000_000)
-    throw Error("Backup is too large (200 MB limit).");
+  if (text.length > MAX_BUNDLE_BYTES)
+    throw Error("Backup is too large (500 MB limit).");
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -29,8 +33,8 @@ export function parseBackup(text: string): {
   return { all: false, sessions: [checkSession(data)] };
 }
 export function parseSession(text: string): Session {
-  if (text.length > 30_000_000)
-    throw Error("Backup is too large (30 MB limit).");
+  if (text.length > MAX_FIT_BYTES)
+    throw Error("Backup is too large (256 MB limit).");
   return checkSession(JSON.parse(text));
 }
 function checkSession(raw: unknown): Session {

@@ -19,11 +19,17 @@ const db = () =>
       d.createObjectStore("videos");
     },
   });
+/** The fit was saved in the browser but its copy on disk was not updated. */
+export class DiskSaveError extends Error {}
 export async function saveSession(s: Session) {
   const d = await db();
   const clean = sessionSchema.parse(s);
   await d.put("sessions", clean);
-  await diskPut(clean);
+  try {
+    await diskPut(clean);
+  } catch (e) {
+    throw new DiskSaveError(e instanceof Error ? e.message : String(e));
+  }
 }
 /** Where fit history is kept on disk, once loadSessions has run. */
 export let diskFolder = "";

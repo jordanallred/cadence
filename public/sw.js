@@ -2,7 +2,8 @@
 // promptly; build assets, fonts, the pose model and its runtime are
 // cache-first because their URLs are versioned or change rarely.
 // Nothing is uploaded: this only caches files served by this app.
-const CACHE = "cadence-v2";
+// Bumped so caches from older versions, which may hold /__cadence, go.
+const CACHE = "cadence-v3";
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/", "/manifest.webmanifest", "/icon.svg"])));
   self.skipWaiting();
@@ -19,8 +20,9 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin) return;
-  // Live data from the desktop launcher (phone link) is never cached.
-  if (url.pathname.startsWith("/api/")) return;
+  // Live data from the desktop launcher (phone link, fit store, and which
+  // version is running) is never cached.
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/__cadence")) return;
   if (req.mode === "navigate") {
     e.respondWith(
       fetch(req)

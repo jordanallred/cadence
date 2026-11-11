@@ -1,6 +1,7 @@
 import type { ClipAnalysis, KeyMoment, PoseFrame, View } from "../domain/types";
 import { openVideo, seek, sampleTimes } from "../video/sample";
 import { measureClip } from "./metrics";
+import { selectRider, type RawFrame } from "./rider";
 import {
   pickSegment,
   SCAN_HZ,
@@ -26,7 +27,7 @@ async function withPose<T>(
   });
   let serial = 0;
   const send = (bitmap: ImageBitmap | undefined, timeMs: number) =>
-    new Promise<PoseFrame | undefined>((resolve, reject) => {
+    new Promise<RawFrame | undefined>((resolve, reject) => {
       signal.throwIfAborted();
       const id = ++serial;
       const timer = setTimeout(
@@ -38,7 +39,7 @@ async function withPose<T>(
           ),
         60000,
       );
-      const finish = (error?: Error, frame?: PoseFrame) => {
+      const finish = (error?: Error, frame?: RawFrame) => {
         clearTimeout(timer);
         worker.removeEventListener("message", message);
         worker.removeEventListener("error", failed);
@@ -64,7 +65,7 @@ async function withPose<T>(
   try {
     const list = times(video.duration);
     await send(undefined, 0);
-    const frames: PoseFrame[] = [];
+    const raw: RawFrame[] = [];
     for (let n = 0; n < list.length; n++) {
       signal.throwIfAborted();
       await seek(video, list[n], signal);
@@ -72,10 +73,10 @@ async function withPose<T>(
         await createImageBitmap(video),
         Math.round(list[n] * 1000),
       );
-      if (frame) frames.push(frame);
+      if (frame) raw.push(frame);
       onProgress((n + 1) / list.length);
     }
-    return await use(frames, video);
+    return await use(selectRider(raw), video);
   } finally {
     worker.terminate();
     dispose();
