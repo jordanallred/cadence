@@ -2356,3 +2356,74 @@ main:focus {
     margin-left: auto;
   }
 }
+.pilot-log {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  max-width: 640px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.pilot-log-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pilot-log h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.pilot-log h3 {
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+.pilot-log p {
+  margin: 8px 0 16px;
+  color: var(--muted);
+}
+.pilot-code {
+  max-width: 220px;
+}
+.pilot-code input {
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+.pilot-code input[aria-invalid="true"] {
+  border-color: #c98a3c;
+}
+.pilot-contents ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.pilot-contents li + li {
+  margin-top: 3px;
+}
+.pilot-contents p {
+  margin-top: 10px;
+}
+.pilot-preview {
+  margin: 0 0 18px;
+}
+.pilot-preview summary {
+  cursor: pointer;
+  color: var(--green);
+  font-weight: 500;
+}
+.pilot-preview pre {
+  max-height: 320px;
+  overflow: auto;
+  background: #f4f6f2;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 12px 14px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: pre;
+}
+@media (max-width: 520px) {
+  .pilot-log {
+    padding: 18px 16px;
+  }
+}

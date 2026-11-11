@@ -1,0 +1,7 @@
+# Cadence pilot: fitter reference readings. One row per reading. See fitter-guide.md.
+# Lines starting with # are ignored by npm run validate. The commented example rows show the format.
+# Run: npm run validate -- docs/pilot/references.csv backups/*.json --method goniometer-dynamic
+clip,view,metric,reference,participant,fitter,visit,method,notes
+#P00-v1-left.mp4,left,knee-min,36,P00,F0,1,goniometer-dynamic,example row
+#P00-v1-left.mp4,left,knee-bdc,31,P00,F0,1,goniometer-static,example row
+#P00-v1-left.mp4,left,torso,44,P00,F0,1,inclinometer,example row

@@ -1,6 +1,10 @@
 # Cadence
 
-A free, local bike-fitting workspace: rider context, side/front/rear video analysis, overlay review and corrections, evidence-linked reports, adjustment history, and ride feedback.
+**Private bike fit tracking: see your position, change one thing, learn whether it helped.**
+
+Record a baseline video of yourself pedaling, make one measured change to your bike, ride with it, record again, and keep or revert the change. Cadence keeps the whole history: every video's measurements, every change in millimetres, and how each ride felt. Analysis runs on your own computer. Nothing is uploaded and there is no account.
+
+It is free and open source. It is not a replacement for a professional fitter or a clinician, and its accuracy on real riders has not been measured yet (see [What has and hasn't been tested](#what-has-and-hasnt-been-tested)).
 
 ## Download
 
@@ -35,9 +39,23 @@ After `npm run build:desktop`, run `npm run e2e` to analyze real pedaling videos
 5. Log one measured change, re-record and add ride feedback. Keep an improvement or revert; the baseline and event history remain intact.
 6. Back up one fit or all fits as JSON, or every fit with its kept videos as a .zip, or print the report. Keeping a video is optional; the desktop app saves kept videos in its `Cadence/videos` folder (the dev server keeps them in the browser). Keep your originals separately too.
 
+## What has and hasn't been tested
+
+**Tested:**
+
+- The geometry and pedal-cycle logic, against an exact synthetic pedaling model: mean knee-angle error 0.25°, within 1.5° with simulated landmark jitter (`tests/kinematics.test.ts`). This shows the maths is right. It says nothing about how well the pose model finds joints on a real rider.
+- End to end on real pedaling footage (`npm run e2e`, `tests/e2e/videos/`): the pose engine loads, tracks the rider, finds the pedal stroke and produces a report. This checks that it works, not that its numbers are correct.
+
+**Not yet tested:**
+
+- Measurement accuracy on real riders against a goniometer or a fitter's system. [docs/pilot/](docs/pilot/README.md) is the plan for a pilot with riders and independent fitters that will measure it and publish the error, failed captures and the cases where Cadence says there is not enough evidence. Until those results are in [docs/evidence.md](docs/evidence.md), no real-world accuracy claim should be made.
+- Whether following the advice reduces pain or discomfort.
+
+The "rule strength" shown on each recommendation describes how well the published evidence and the quality of your recording support that rule. It is not a measured accuracy.
+
 ## Honest boundaries
 
-This is an experimental application, not an expert-validated or medically validated fitter. Saddle-height advice uses a published dynamic knee-angle range; reach, drop and knee-tracking advice uses labelled product heuristics from common fitting practice. The measurement pipeline is verified against an exact synthetic pedaling model (mean knee-angle error 0.25°), but accuracy on real riders has not yet been measured. `docs/validation.md` and `npm run validate` give the protocol and tooling to do that. See docs/evidence.md.
+This is an experimental application, not an expert-validated or medically validated fitter. Saddle-height advice uses a published dynamic knee-angle range; reach, drop and knee-tracking advice uses labelled product heuristics from common fitting practice. See docs/evidence.md.
 
 Video format support depends on the browser. H.264 MP4 and WebM are the main paths; HEVC varies. Use HandBrake locally to make a compatible copy when necessary. Measurements are projected 2D estimates. Separate clips are not simultaneous 3D capture.
 

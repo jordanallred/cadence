@@ -49,3 +49,7 @@ each metric, and exits non-zero if any metric misses the targets:
 Record the results in `docs/evidence.md` with the date, rider count and
 reference method. Until then, the app and README must keep saying accuracy on
 real riders has not been validated.
+
+## The rider pilot
+
+[docs/pilot/](pilot/README.md) runs this protocol at larger scale with riders and independent fitters: a fitter measurement guide, a `references.csv` with a `method` column (run `npm run validate -- docs/pilot/references.csv backups/*.json --method goniometer-dynamic` once per method, because static and dynamic readings differ), a capture-failure log and a results template.

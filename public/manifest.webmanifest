@@ -1,7 +1,7 @@
 {
   "name": "Cadence — Bike Fit",
   "short_name": "Cadence",
-  "description": "Free, private bike fitting from your own videos. Analysis runs on your device.",
+  "description": "Private bike fit tracking: see your position, change one thing, learn whether it helped.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

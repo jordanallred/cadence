@@ -23,12 +23,15 @@ export function Capture({
   clips,
   revision,
   onClip,
+  onFailed,
   onReview,
   onNext,
 }: {
   clips: ClipAnalysis[];
   revision: number;
   onClip: (c: ClipAnalysis, f: File, retain: boolean) => Promise<void>;
+  /** Analysis threw before producing a result (not a cancel). */
+  onFailed?: (view: View) => void;
   onReview: (c: ClipAnalysis) => void;
   onNext: () => void;
 }) {
@@ -145,6 +148,7 @@ export function Capture({
       setFile(undefined);
       onReview(c);
     } catch (e) {
+      if (!abort.current?.signal.aborted) onFailed?.(view);
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setProgress(null);
