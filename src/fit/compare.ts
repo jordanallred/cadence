@@ -6,6 +6,7 @@ import type {
   Session,
 } from "../domain/types";
 import { describeRange, targetRange, type TargetRange } from "./ranges";
+import { measurement } from "./measurements";
 
 /**
  * Side-view measurements worth comparing between setups, in the order a
@@ -98,12 +99,6 @@ export function changesBetween(
   });
 }
 
-const SETTING = {
-  saddleHeight: { name: "Saddle height", unit: " mm" },
-  saddleSetback: { name: "Saddle setback", unit: " mm" },
-  saddleTilt: { name: "Saddle tilt", unit: "°" },
-} as const;
-
 /** One change in words, e.g. "Saddle height 720 → 725 mm". */
 export function describeChange(e: FitEvent, session: Session): string {
   if (e.kind === "revert") {
@@ -112,9 +107,9 @@ export function describeChange(e: FitEvent, session: Session): string {
     return `Undid ${what[0].toLowerCase() + what.slice(1)}`;
   }
   if (e.setting && e.setting !== "other") {
-    const s = SETTING[e.setting];
+    const m = measurement(e.setting);
     const v = (n: number | null | undefined) => (n == null ? "unknown" : n);
-    return `${s.name} ${v(e.before)} → ${v(e.after)}${s.unit}`;
+    return `${m.label} ${v(e.before)} → ${v(e.after)}${m.unit === "°" ? "°" : " " + m.unit}`;
   }
   return e.detail.trim() || "Unrecorded change";
 }

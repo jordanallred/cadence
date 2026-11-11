@@ -10,6 +10,7 @@ import {
   headlineText,
   revisionAfter,
 } from "../../fit/compare";
+import { loggedSettings, measurement } from "../../fit/measurements";
 export function FollowUp({
   session,
   onChange,
@@ -90,8 +91,8 @@ export function FollowUp({
                 <span className="eyebrow">IN PROGRESS</span>
                 <h3>{active.detail}</h3>
                 <p>
-                  {active.setting !== "other"
-                    ? `${active.before ?? "Unknown"} → ${active.after ?? "Unknown"} ${active.setting === "saddleTilt" ? "°" : "mm"}`
+                  {active.setting && active.setting !== "other"
+                    ? `${active.before ?? "Unknown"} → ${active.after ?? "Unknown"} ${active.setting ? measurement(active.setting).unit : ""}`
                     : ""}
                 </p>
                 <small>Your previous setup remains in the history.</small>
@@ -166,9 +167,14 @@ export function FollowUp({
                     setAfter("");
                   }}
                 >
-                  <option value="saddleHeight">Saddle height · mm</option>
-                  <option value="saddleSetback">Saddle setback · mm</option>
-                  <option value="saddleTilt">Saddle tilt · degrees</option>
+                  {loggedSettings.map((key) => {
+                    const m = measurement(key);
+                    return (
+                      <option key={key} value={key}>
+                        {m.label} · {m.unit === "°" ? "degrees" : m.unit}
+                      </option>
+                    );
+                  })}
                   <option value="other">Other · describe below</option>
                 </select>
               </Field>
