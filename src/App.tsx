@@ -9,6 +9,7 @@ import {
   Download,
   Upload,
   Trash2,
+  Compass,
 } from "lucide-react";
 import { newSession, type Session, type ClipAnalysis } from "./domain/types";
 import { Intake } from "./features/intake/Intake";
@@ -16,6 +17,8 @@ import { Capture } from "./features/capture/Capture";
 import { ClipReview } from "./features/review/ClipReview";
 import { Report } from "./features/report/Report";
 import { FollowUp } from "./features/followup/FollowUp";
+import { WhereYouAre } from "./features/home/WhereYouAre";
+import { hasStarted, type Place } from "./fit/loop";
 import { recommend } from "./fit/recommend";
 import { assessContext } from "./fit/assessment";
 import {
@@ -47,6 +50,7 @@ import {
 const SAVE_FAILED = "Could not save locally.";
 const DISK_FAILED = "Saved in this browser, but not in the fit folder on disk.";
 const steps = [
+  { title: "Where you are", sub: "Next step & results", icon: Compass },
   {
     title: "Your starting point",
     sub: "Rider, bike & comfort",
@@ -56,10 +60,18 @@ const steps = [
   { title: "Fit report", sub: "What to change first", icon: ClipboardList },
   { title: "Ride & refine", sub: "Changes & real-world feedback", icon: Route },
 ];
+const PLACE: Record<Place, number> = {
+  start: 1,
+  record: 2,
+  report: 3,
+  refine: 4,
+};
+/** A fit with history opens on Where you are; a new one on Your starting point. */
+const firstStep = (s: Session) => (hasStarted(s) ? 0 : 1);
 export default function App() {
   const [sessions, setSessions] = useState<Session[]>([]),
     [session, setSession] = useState<Session | null>(null),
-    [step, setStep] = useState(0),
+    [step, setStep] = useState(1),
     [review, setReview] = useState<string | null>(null),
     [error, setError] = useState(""),
     [saveState, setSaveState] = useState("Loading…"),
@@ -91,6 +103,7 @@ export default function App() {
         if (!live) return;
         setSessions(list);
         setSession(list[0] ?? newSession());
+        setStep(list[0] ? firstStep(list[0]) : 1);
         loaded.current = true;
         setSaveState(savedWhere());
       })
@@ -183,7 +196,7 @@ export default function App() {
       const target = sessions.find((s) => s.id === id);
       if (target) {
         setSession(target);
-        go(0);
+        go(firstStep(target));
       }
     } catch (e) {
       setError(String(e));
@@ -193,7 +206,7 @@ export default function App() {
     try {
       await persistNow();
       setSession(newSession());
-      go(0);
+      go(1);
     } catch (e) {
       setError(String(e));
     }
@@ -220,7 +233,7 @@ export default function App() {
         setSessions(list);
         setSession(list[0] ?? newSession());
         setError("");
-        go(0);
+        go(list[0] ? firstStep(list[0]) : 1);
         return;
       }
       const incoming = backup.sessions[0];
@@ -234,7 +247,7 @@ export default function App() {
       setSessions((list) => [incoming, ...list]);
       setSession(incoming);
       setError("");
-      go(0);
+      go(firstStep(incoming));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -249,14 +262,14 @@ export default function App() {
       setSessions(remaining);
       setSession(remaining[0] ?? newSession());
       setDeletePending(false);
-      go(0);
+      go(remaining[0] ? firstStep(remaining[0]) : 1);
     } catch (e) {
       setError(String(e));
     }
   };
   if (!session) return <div className="loading">Loading your fits…</div>;
   document.title =
-    (step === 1 && review ? "Check the tracking" : steps[step].title) +
+    (step === 2 && review ? "Check the tracking" : steps[step].title) +
     " · Cadence";
   const selected = session.clips.find((c) => c.id === review),
     context = assessContext(session.intake, session.events),
@@ -363,14 +376,21 @@ export default function App() {
             </div>
           )}
           {step === 0 && (
+            <WhereYouAre
+              session={session}
+              results={results}
+              onGo={(p) => go(PLACE[p])}
+            />
+          )}
+          {step === 1 && (
             <Intake
               value={session.intake}
               onChange={(i) => update({ ...session, intake: i })}
-              onNext={() => go(1)}
+              onNext={() => go(2)}
               locked={session.baseline !== null}
             />
           )}
-          {step === 1 &&
+          {step === 2 &&
             (selected ? (
               <ClipReview
                 key={selected.id}
@@ -421,20 +441,20 @@ export default function App() {
                   });
                 }}
                 onReview={(c) => setReview(c.id)}
-                onNext={() => go(2)}
+                onNext={() => go(3)}
               />
             ))}
-          {step === 2 && (
-            <Report session={session} results={results} onNext={() => go(3)} />
-          )}
           {step === 3 && (
+            <Report session={session} results={results} onNext={() => go(4)} />
+          )}
+          {step === 4 && (
             <FollowUp
               key={session.id}
               session={session}
               results={results}
               onChange={update}
-              onRecord={() => go(1)}
-              onReport={() => go(2)}
+              onRecord={() => go(2)}
+              onReport={() => go(3)}
             />
           )}
           <footer className="workspace-footer no-print">
@@ -529,7 +549,7 @@ export default function App() {
             {diskFolder
               ? `Fits and kept videos are saved in ${diskFolder.replace(/[\\/]sessions$/, "")}. Keep a backup and your original videos too.`
               : "Browser data can be cleared by your browser or operating system. Keep a backup and your original videos."}{" "}
-            <a href="#policy" onClick={() => go(2)}>
+            <a href="#policy" onClick={() => go(3)}>
               Evidence & limitations
             </a>
           </p>
