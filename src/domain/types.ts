@@ -338,6 +338,12 @@ export const recommendationSchema = z.object({
   againstBy: z.enum(["measurement", "severity"]).optional(),
 });
 export type Recommendation = z.infer<typeof recommendationSchema>;
+export const ratingSchema = z.object({
+  area: symptomAreaSchema,
+  side: z.enum(["left", "right", "both"]),
+  severity: z.number().int().min(0).max(10),
+});
+export type SymptomRating = z.infer<typeof ratingSchema>;
 export const eventSchema = z.object({
   id: z.string(),
   at: z.string(),
@@ -363,6 +369,12 @@ export const eventSchema = z.object({
   intensity: z.enum(["easy", "moderate", "hard"]).optional(),
   comfort: z.number().min(0).max(10).optional(),
   response: z.enum(["better", "same", "worse"]).optional(),
+  /**
+   * Symptom ratings, 0 (gone) to 10. On a ride: how each symptom felt on
+   * that ride. On an adjustment: the ratings just before the change, so
+   * later rides can be compared with them.
+   */
+  symptoms: z.array(ratingSchema).max(30).optional(),
 });
 export type FitEvent = z.infer<typeof eventSchema>;
 /**
