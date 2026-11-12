@@ -13,6 +13,7 @@ import {
 } from "../../fit/loop";
 import { download } from "../../storage/portable";
 import { OutcomeCard } from "../followup/OutcomeCard";
+import { ShareWithFitter } from "./ShareWithFitter";
 
 const daysAgo = (iso: string) => {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
@@ -128,6 +129,7 @@ export function WhereYouAre({
           </ul>
         </section>
       )}
+      <ShareWithFitter session={session} results={results} />
       <section className="reminder" aria-labelledby="remind-h">
         <h2 id="remind-h">Remind me to come back</h2>
         <p className="muted">
