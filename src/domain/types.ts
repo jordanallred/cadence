@@ -377,6 +377,19 @@ export const eventSchema = z.object({
   symptoms: z.array(ratingSchema).max(30).optional(),
 });
 export type FitEvent = z.infer<typeof eventSchema>;
+/**
+ * One analysis attempt, kept even if the rider later deletes the clip, so
+ * the pilot log can count failed captures (src/fit/pilot.ts). Reason codes
+ * only: the quality codes from analysis, or "analysis-error" when analysis
+ * failed outright.
+ */
+export const captureAttemptSchema = z.object({
+  at: z.string(),
+  view: viewSchema,
+  result: z.enum(["accepted", "rejected", "failed"]),
+  codes: z.array(z.string().max(40)).max(20),
+});
+export type CaptureAttempt = z.infer<typeof captureAttemptSchema>;
 export const sessionSchema = z.object({
   schemaVersion: z.literal(1),
   id: z.string(),
@@ -388,6 +401,14 @@ export const sessionSchema = z.object({
   events: z.array(eventSchema).max(2000),
   recommendations: z.array(recommendationSchema),
   setupRevision: z.number().int().nonnegative(),
+  /** Added for the rider pilot. Older fits load with an empty log. */
+  captureLog: z.array(captureAttemptSchema).max(500).default([]),
+  /** Pilot participant code from the pilot lead, e.g. "P07". */
+  pilotCode: z
+    .string()
+    .regex(/^[A-Z]{1,3}[0-9]{1,3}$/)
+    .optional()
+    .catch(undefined),
 });
 export type Session = z.infer<typeof sessionSchema>;
 export const defaultIntake: Intake = {
@@ -431,5 +452,6 @@ export function newSession(): Session {
     events: [],
     recommendations: [],
     setupRevision: 0,
+    captureLog: [],
   };
 }

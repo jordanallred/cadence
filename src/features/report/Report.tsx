@@ -172,9 +172,12 @@ export function Report({
                       <span className="chip">Change {r.priority}, later</span>
                     )}
                     {r.confidence && (
-                      <span className="chip">
-                        {r.confidence[0].toUpperCase() + r.confidence.slice(1)}{" "}
-                        confidence
+                      <span
+                        className="chip"
+                        title="How well the evidence behind this rule and your recording support it. Not a measured accuracy."
+                      >
+                        {r.confidence[0].toUpperCase() + r.confidence.slice(1)}
+                        -strength rule
                       </span>
                     )}
                   </div>
@@ -293,8 +296,10 @@ export function Report({
             <Info size={17} />
             <span>
               This is an experimental fitting aid. Multi-view video does not
-              measure pressure, forces or establish a medical diagnosis.
-              Expert-equivalent accuracy has not been validated.
+              measure pressure, forces or establish a medical diagnosis. Rule
+              strength on each change says how well the evidence and your
+              recording support that rule, not how accurate the measurement is.
+              Accuracy on real riders has not been measured yet.
             </span>
           </Notice>
         </aside>

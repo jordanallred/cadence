@@ -68,7 +68,7 @@ func main() {
 }
 
 func run(port int, openBrowser, phone bool, lanIP string) error {
-	fmt.Printf("Cadence %s — free, private bike fitting\n\n", version)
+	fmt.Printf("Cadence %s — private bike fit tracking\n\n", version)
 	modelPath, err := ensureModel()
 	if err != nil {
 		return err

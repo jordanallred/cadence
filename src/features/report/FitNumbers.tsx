@@ -30,7 +30,7 @@ const span = (e: { minMm: number; maxMm: number; unit?: string }) =>
   rangeText({ min: e.minMm, max: e.maxMm } as Range, e.unit ?? "mm");
 const conf = (r: Recommendation) =>
   r.confidence
-    ? `${r.confidence[0].toUpperCase()}${r.confidence.slice(1)} confidence. `
+    ? `${r.confidence[0].toUpperCase()}${r.confidence.slice(1)}-strength rule. `
     : "";
 const hasHeight = (i: Intake) => i.riderHeight !== null;
 const roadOnly = (i: Intake) =>

@@ -9,6 +9,7 @@ import {
   Download,
   Upload,
   Trash2,
+  FileCheck2,
   Compass,
 } from "lucide-react";
 import { newSession, type Session, type ClipAnalysis } from "./domain/types";
@@ -17,6 +18,7 @@ import { Capture } from "./features/capture/Capture";
 import { ClipReview } from "./features/review/ClipReview";
 import { Report } from "./features/report/Report";
 import { FollowUp } from "./features/followup/FollowUp";
+import { PilotLog } from "./features/pilot/PilotLog";
 import { WhereYouAre } from "./features/home/WhereYouAre";
 import { hasStarted, type Place } from "./fit/loop";
 import { recommend } from "./fit/recommend";
@@ -76,6 +78,7 @@ export default function App() {
     [error, setError] = useState(""),
     [saveState, setSaveState] = useState("Loading…"),
     [deletePending, setDeletePending] = useState(false),
+    [pilotOpen, setPilotOpen] = useState(false),
     [outdated, setOutdated] = useState(false);
   const files = useRef(new Map<string, File>()),
     saveChain = useRef(Promise.resolve()),
@@ -433,13 +436,41 @@ export default function App() {
                       );
                     }
                   }
+                  const rejected = c.quality.some(
+                    (q) => q.severity === "reject",
+                  );
                   update({
                     ...session,
                     baseline:
                       session.baseline ?? structuredClone(session.intake),
                     clips: [...session.clips, c],
+                    captureLog: [
+                      ...session.captureLog,
+                      {
+                        at: c.createdAt,
+                        view: c.view,
+                        result: rejected
+                          ? ("rejected" as const)
+                          : ("accepted" as const),
+                        codes: c.quality.map((q) => q.code).slice(0, 20),
+                      },
+                    ].slice(-500),
                   });
                 }}
+                onFailed={(view) =>
+                  update({
+                    ...session,
+                    captureLog: [
+                      ...session.captureLog,
+                      {
+                        at: new Date().toISOString(),
+                        view,
+                        result: "failed" as const,
+                        codes: ["analysis-error"],
+                      },
+                    ].slice(-500),
+                  })
+                }
                 onReview={(c) => setReview(c.id)}
                 onNext={() => go(3)}
               />
@@ -522,12 +553,28 @@ export default function App() {
                   }}
                 />
               </label>
+              <button
+                aria-expanded={pilotOpen}
+                onClick={() => setPilotOpen(!pilotOpen)}
+              >
+                <FileCheck2 size={14} />
+                Pilot log
+              </button>
               <button onClick={() => setDeletePending(!deletePending)}>
                 <Trash2 size={14} />
                 Delete fit
               </button>
             </div>
           </footer>
+          {pilotOpen && (
+            <PilotLog
+              key={session.id}
+              session={session}
+              results={results}
+              onCode={(pilotCode) => update({ ...session, pilotCode })}
+              onClose={() => setPilotOpen(false)}
+            />
+          )}
           {deletePending && (
             <Notice tone="warning">
               <span>
